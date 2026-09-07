@@ -68,13 +68,17 @@ async function tousLesArticles(): Promise<Article[]> {
     );
   }
 
-  const { lireArticlesPersonnalises } = await import("./articles-store");
-  const custom = await lireArticlesPersonnalises();
+  const { lireArticlesPersonnalises, lireSlugsSupprimes } = await import("./articles-store");
+  const [custom, supprimes] = await Promise.all([
+    lireArticlesPersonnalises(),
+    lireSlugsSupprimes(),
+  ]);
+  const ensembleSupprimes = new Set(supprimes);
   const slugsCustom = new Set(custom.map((a) => a.slug));
   const liste = [
     ...custom,
     ...ARTICLES_DEMO.filter((a) => !slugsCustom.has(a.slug)),
-  ];
+  ].filter((a) => !ensembleSupprimes.has(a.slug));
 
   return trierParDate(liste);
 }

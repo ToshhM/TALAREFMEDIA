@@ -6,7 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { UNIVERS, getCollectionsForUnivers } from "@/lib/univers";
 import type { CollectionSlug, UniverseSlug } from "@/lib/univers";
-import type { Bloc, UserProfile, UserRole } from "@/lib/types";
+import type { Article, Bloc, UserProfile, UserRole } from "@/lib/types";
 import type { User } from "@supabase/supabase-js";
 import { parserSourceVideo } from "@/lib/video-utils";
 import { FacadeVideo } from "@/components/facade-video";
@@ -319,7 +319,14 @@ export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [chargement, setChargement] = useState(true);
-  const [ongletActif, setOngletActif] = useState<"redaction" | "utilisateurs">("redaction");
+  const [ongletActif, setOngletActif] = useState<"redaction" | "articles" | "utilisateurs">("redaction");
+
+  // État du mode édition
+  const [modeEdition, setModeEdition] = useState<{
+    actif: boolean;
+    slug: string;
+    refNumber?: number;
+  }>({ actif: false, slug: "" });
 
   // État de l'éditeur d'article (façon Medium)
   const [titre, setTitre] = useState("");
@@ -345,6 +352,13 @@ export default function AdminPage() {
     texte: string;
     url?: string;
   } | null>(null);
+
+  // État de la gestion des articles (Admin uniquement)
+  const [listeArticles, setListeArticles] = useState<Article[]>([]);
+  const [chargementArticles, setChargementArticles] = useState(false);
+  const [rechercheArticle, setRechercheArticle] = useState("");
+  const [universFiltre, setUniversFiltre] = useState<string>("tous");
+  const [suppressionArticleSlug, setSuppressionArticleSlug] = useState<string | null>(null);
 
   // État de la gestion des utilisateurs (Admin)
   const [utilisateurs, setUtilisateurs] = useState<UserProfile[]>([]);
@@ -379,6 +393,26 @@ export default function AdminPage() {
     });
   }, [router]);
 
+  const chargerArticles = () => {
+    setChargementArticles(true);
+    fetch("/api/admin/articles")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.articles) {
+          setListeArticles(data.articles);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setChargementArticles(false));
+  };
+
+  // Charger les articles si rôle admin
+  useEffect(() => {
+    if (role === "admin") {
+      chargerArticles();
+    }
+  }, [role, ongletActif]);
+
   // Charger la liste des utilisateurs si onglet actif
   useEffect(() => {
     if (ongletActif === "utilisateurs" && role === "admin") {
@@ -394,6 +428,106 @@ export default function AdminPage() {
         .finally(() => setChargementUsers(false));
     }
   }, [ongletActif, role]);
+
+  // Charger un article existant dans le formulaire pour modification
+  const chargerArticlePourModification = (art: Article) => {
+    setModeEdition({
+      actif: true,
+      slug: art.slug,
+      refNumber: art.refNumber,
+    });
+    setTitre(art.titre);
+    setHeroTitle(art.heroTitle || "");
+    setChapo(art.chapo);
+    setUnivers(art.univers);
+    setCollection(art.collection || "");
+    setImageUrl(art.imageDeUne?.url || "");
+    setImageCredit(art.imageDeUne?.credit || "Talaref Media");
+    setImageAlt(art.imageDeUne?.alt || "");
+    setVideoPrincipaleUrl(art.video?.youtubeId || (art.video as any)?.url || "");
+    setVideoPrincipaleTitre(art.video?.titre || "");
+    setTagsRaw(art.tags?.map((t) => t.nom).join(", ") || "");
+
+    const formBlocs: FormBloc[] = (art.corps || []).map((b) => {
+      if (b._type === "paragraphe") return { _type: "paragraphe", texte: b.texte };
+      if (b._type === "intertitre") return { _type: "intertitre", niveau: b.niveau, texte: b.texte };
+      if (b._type === "laRef") return { _type: "laRef", titre: b.titre, texte: b.texte };
+      if (b._type === "citation") return { _type: "citation", texte: b.texte, auteur: b.auteur };
+      if (b._type === "chiffreCle") {
+        return { _type: "chiffreCle", valeur: b.valeur, libelle: b.libelle, source: b.source };
+      }
+      if (b._type === "image") {
+        return {
+          _type: "image",
+          url: b.image?.url,
+          alt: b.image?.alt,
+          credit: b.image?.credit,
+          legende: b.image?.legende,
+        };
+      }
+      if (b._type === "moduleVideo") {
+        return {
+          _type: "moduleVideo",
+          youtubeId: b.video?.youtubeId,
+          titre: b.video?.titre,
+          duree: b.video?.duree,
+        };
+      }
+      if (b._type === "galerie") {
+        return {
+          _type: "galerie",
+          images: b.images || [],
+        };
+      }
+      return { _type: "paragraphe", texte: "" };
+    });
+
+    setBlocs(formBlocs.length > 0 ? formBlocs : [{ _type: "paragraphe", texte: "" }]);
+    setMessagePublication(null);
+    setOngletActif("redaction");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const annulerModification = () => {
+    setModeEdition({ actif: false, slug: "" });
+    setTitre("");
+    setHeroTitle("");
+    setChapo("");
+    setImageUrl("");
+    setVideoPrincipaleUrl("");
+    setVideoPrincipaleTitre("");
+    setTagsRaw("");
+    setBlocs([
+      { _type: "paragraphe", texte: "" },
+      { _type: "laRef", titre: "La référence", texte: "" },
+    ]);
+  };
+
+  const handleSupprimerArticle = async (slug: string, titreArt: string) => {
+    if (!confirm(`Supprimer définitivement l'article « ${titreArt} » ? Cette action est irréversible.`)) {
+      return;
+    }
+
+    setSuppressionArticleSlug(slug);
+    try {
+      const res = await fetch(`/api/admin/articles?slug=${encodeURIComponent(slug)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        setListeArticles((prev) => prev.filter((a) => a.slug !== slug));
+        if (modeEdition.actif && modeEdition.slug === slug) {
+          annulerModification();
+        }
+      } else {
+        alert(data.error || "Erreur lors de la suppression de l'article");
+      }
+    } catch {
+      alert("Erreur réseau");
+    } finally {
+      setSuppressionArticleSlug(null);
+    }
+  };
 
   // Gestion des blocs de rédaction
   const ajouterBloc = (type: FormBloc["_type"]) => {
@@ -539,33 +673,44 @@ export default function AdminPage() {
             }
           : undefined;
 
+        const methode = modeEdition.actif ? "PUT" : "POST";
+        const payload = {
+          slug: modeEdition.actif ? modeEdition.slug : undefined,
+          refNumber: modeEdition.actif ? modeEdition.refNumber : undefined,
+          titre,
+          heroTitle,
+          chapo,
+          univers,
+          collection: collection || undefined,
+          imageUrl,
+          imageCredit,
+          imageAlt,
+          tagsRaw,
+          corps: corpsBlocs,
+          video: videoArticle,
+          auteurNom: user?.user_metadata?.full_name || user?.user_metadata?.pseudonyme || "La rédaction",
+          auteurSlug: "redaction",
+        };
+
         const res = await fetch("/api/admin/articles", {
-          method: "POST",
+          method: methode,
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            titre,
-            heroTitle,
-            chapo,
-            univers,
-            collection: collection || undefined,
-            imageUrl,
-            imageCredit,
-            imageAlt,
-            tagsRaw,
-            corps: corpsBlocs,
-            video: videoArticle,
-            auteurNom: user?.user_metadata?.full_name || user?.user_metadata?.pseudonyme || "La rédaction",
-            auteurSlug: "redaction",
-          }),
+          body: JSON.stringify(payload),
         });
 
         const data = await res.json();
         if (data.success && data.article) {
           setMessagePublication({
             type: "succes",
-            texte: `L'article « ${data.article.titre} » a été publié avec succès !`,
+            texte: modeEdition.actif
+              ? `L'article « ${data.article.titre} » a été mis à jour avec succès !`
+              : `L'article « ${data.article.titre} » a été publié avec succès !`,
             url: data.url,
           });
+          chargerArticles();
+          if (modeEdition.actif) {
+            setModeEdition({ actif: false, slug: "" });
+          }
           // Réinitialiser les champs principaux
           setTitre("");
           setHeroTitle("");
@@ -574,11 +719,15 @@ export default function AdminPage() {
           setVideoPrincipaleUrl("");
           setVideoPrincipaleTitre("");
           setTagsRaw("");
+          setBlocs([
+            { _type: "paragraphe", texte: "" },
+            { _type: "laRef", titre: "La référence", texte: "" },
+          ]);
         } else {
-          setMessagePublication({ type: "erreur", texte: data.error || "Erreur de publication." });
+          setMessagePublication({ type: "erreur", texte: data.error || "Erreur de traitement." });
         }
       } catch {
-        setMessagePublication({ type: "erreur", texte: "Erreur lors de la publication de l'article." });
+        setMessagePublication({ type: "erreur", texte: "Erreur lors de la communication avec le serveur." });
       }
     });
   };
@@ -667,6 +816,17 @@ export default function AdminPage() {
       u.pseudonyme.toLowerCase().includes(rechercheUser.toLowerCase()),
   );
 
+  const articlesFiltres = listeArticles.filter((art) => {
+    const q = rechercheArticle.toLowerCase().trim();
+    const matchRecherche =
+      !q ||
+      art.titre.toLowerCase().includes(q) ||
+      art.slug.toLowerCase().includes(q) ||
+      art.tags?.some((t) => t.nom.toLowerCase().includes(q));
+    const matchUnivers = universFiltre === "tous" || art.univers === universFiltre;
+    return matchRecherche && matchUnivers;
+  });
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       {/* Header Administration */}
@@ -684,7 +844,7 @@ export default function AdminPage() {
             <h1 className="mt-1 text-3xl font-black text-blanc">Console Éditoriale</h1>
           </div>
 
-          <div className="flex gap-2 border border-ligne bg-surface p-1 rounded-md">
+          <div className="flex flex-wrap gap-2 border border-ligne bg-surface p-1 rounded-md">
             <button
               type="button"
               onClick={() => setOngletActif("redaction")}
@@ -696,6 +856,22 @@ export default function AdminPage() {
             >
               ✍️ Rédaction (Medium)
             </button>
+            {role === "admin" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOngletActif("articles");
+                  chargerArticles();
+                }}
+                className={`rounded px-3 py-1.5 text-xs font-bold transition-colors ${
+                  ongletActif === "articles"
+                    ? "bg-nexus text-noir"
+                    : "text-gris hover:text-blanc"
+                }`}
+              >
+                📑 Tous les articles ({listeArticles.length})
+              </button>
+            )}
             {role === "admin" && (
               <button
                 type="button"
@@ -716,6 +892,29 @@ export default function AdminPage() {
       {/* ONGLET RÉDACTION STYLE MEDIUM */}
       {ongletActif === "redaction" && (
         <section className="space-y-8">
+          {modeEdition.actif && (
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-nexus/70 bg-nexus/10 p-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">✏️</span>
+                <div>
+                  <div className="text-[0.6875rem] font-bold uppercase tracking-wider text-nexus">
+                    Mode Modification (Admin)
+                  </div>
+                  <div className="text-sm font-bold text-blanc">
+                    Modification en cours : <span className="underline">{titre || modeEdition.slug}</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={annulerModification}
+                className="rounded border border-ligne bg-surface px-3 py-1.5 text-xs font-bold text-blanc hover:border-nexus hover:text-nexus transition-colors"
+              >
+                ✕ Annuler et créer un nouvel article
+              </button>
+            </div>
+          )}
+
           {messagePublication && (
             <div
               className={`rounded-md p-4 text-sm font-semibold ${
@@ -1177,18 +1376,183 @@ export default function AdminPage() {
                 ))}
               </div>
 
-              {/* Bouton de publication */}
-              <div className="mt-12 flex justify-end border-t border-ligne pt-6">
+              {/* Bouton de publication / modification */}
+              <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-ligne pt-6">
+                {modeEdition.actif ? (
+                  <button
+                    type="button"
+                    onClick={annulerModification}
+                    className="rounded border border-ligne bg-surface px-4 py-2.5 text-xs font-bold text-gris hover:border-nexus/40 hover:text-blanc transition-colors"
+                  >
+                    ✕ Annuler la modification
+                  </button>
+                ) : (
+                  <div />
+                )}
                 <button
                   type="submit"
                   disabled={publicationEnCours}
                   className="rounded-md bg-nexus px-6 py-3 text-sm font-black uppercase tracking-wider text-noir transition-opacity hover:opacity-90 disabled:opacity-50"
                 >
-                  {publicationEnCours ? "Publication en cours..." : "🚀 Publier l'article"}
+                  {publicationEnCours
+                    ? (modeEdition.actif ? "Mise à jour en cours..." : "Publication en cours...")
+                    : (modeEdition.actif ? "💾 Enregistrer les modifications" : "🚀 Publier l'article")}
                 </button>
               </div>
             </div>
           </form>
+        </section>
+      )}
+
+      {/* ONGLET GESTION DES ARTICLES (ADMIN UNIQUEMENT - CRUD COMPLET) */}
+      {ongletActif === "articles" && role === "admin" && (
+        <section className="space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-blanc">
+                Catalogue de tous les articles ({articlesFiltres.length})
+              </h2>
+              <p className="mt-1 text-xs text-gris">
+                Consultez, modifiez ou supprimez n'importe quel article existant.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  annulerModification();
+                  setOngletActif("redaction");
+                }}
+                className="rounded bg-nexus px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-noir hover:opacity-90 transition-opacity"
+              >
+                + Rédiger un nouvel article
+              </button>
+            </div>
+          </div>
+
+          {/* Filtres de recherche */}
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-ligne bg-surface p-4">
+            <input
+              type="text"
+              value={rechercheArticle}
+              onChange={(e) => setRechercheArticle(e.target.value)}
+              placeholder="Rechercher par titre, slug, tag..."
+              className="min-w-[240px] flex-1 rounded border border-ligne bg-noir px-3 py-2 text-xs text-blanc placeholder-gris/60 focus:border-nexus focus:outline-none"
+            />
+            <select
+              value={universFiltre}
+              onChange={(e) => setUniversFiltre(e.target.value)}
+              className="rounded border border-ligne bg-noir px-3 py-2 text-xs font-bold text-blanc focus:border-nexus focus:outline-none"
+            >
+              <option value="tous">Tous les univers</option>
+              {UNIVERS.map((u) => (
+                <option key={u.slug} value={u.slug}>
+                  {u.nom}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {chargementArticles ? (
+            <p className="text-xs text-gris">Chargement des articles...</p>
+          ) : articlesFiltres.length === 0 ? (
+            <div className="rounded-lg border border-ligne bg-surface p-8 text-center">
+              <p className="text-sm text-gris">Aucun article trouvé pour ces critères.</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-ligne bg-surface">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-ligne bg-surface-2 text-gris">
+                  <tr>
+                    <th className="p-3.5 font-bold uppercase tracking-wider">Article</th>
+                    <th className="p-3.5 font-bold uppercase tracking-wider">Univers</th>
+                    <th className="p-3.5 font-bold uppercase tracking-wider">Date</th>
+                    <th className="p-3.5 font-bold uppercase tracking-wider">Lecture</th>
+                    <th className="p-3.5 text-right font-bold uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-ligne">
+                  {articlesFiltres.map((art) => {
+                    const estEnCoursDeSuppression = suppressionArticleSlug === art.slug;
+                    return (
+                      <tr key={art.slug} className="transition-colors hover:bg-noir/30">
+                        <td className="p-3.5">
+                          <div className="flex items-center gap-3">
+                            {art.imageDeUne?.url ? (
+                              <img
+                                src={art.imageDeUne.url}
+                                alt={art.titre}
+                                className="h-10 w-14 rounded object-cover border border-ligne"
+                              />
+                            ) : (
+                              <div className="flex h-10 w-14 items-center justify-center rounded border border-ligne bg-noir text-[0.625rem] text-gris">
+                                Sans img
+                              </div>
+                            )}
+                            <div>
+                              <div className="font-bold text-blanc line-clamp-1">{art.titre}</div>
+                              <div className="mt-0.5 font-mono text-[0.6875rem] text-gris/70">
+                                #{art.refNumber} · /{art.slug}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-3.5">
+                          <span className="rounded bg-surface-2 px-2 py-0.5 text-[0.6875rem] font-bold uppercase text-nexus border border-ligne">
+                            {art.univers}
+                          </span>
+                          {art.collection && (
+                            <div className="mt-1 text-[0.625rem] text-gris">
+                              {art.collection}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-3.5 text-gris whitespace-nowrap">
+                          {new Date(art.publieLe).toLocaleDateString("fr-FR", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </td>
+                        <td className="p-3.5 text-gris whitespace-nowrap">
+                          {art.tempsDeLecture} min
+                        </td>
+                        <td className="p-3.5 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              href={`/articles/${art.slug}`}
+                              target="_blank"
+                              className="rounded border border-ligne bg-surface px-2.5 py-1 text-[0.6875rem] font-bold text-blanc hover:border-nexus hover:text-nexus transition-colors"
+                              title="Voir l'article en ligne"
+                            >
+                              👁 Voir
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => chargerArticlePourModification(art)}
+                              className="rounded border border-nexus/50 bg-nexus/10 px-2.5 py-1 text-[0.6875rem] font-bold text-nexus hover:bg-nexus hover:text-noir transition-colors"
+                              title="Modifier cet article"
+                            >
+                              ✏️ Modifier
+                            </button>
+                            <button
+                              type="button"
+                              disabled={estEnCoursDeSuppression}
+                              onClick={() => handleSupprimerArticle(art.slug, art.titre)}
+                              className="rounded border border-encre/40 px-2.5 py-1 text-[0.6875rem] font-bold text-encre hover:bg-encre hover:text-noir disabled:opacity-40 transition-colors"
+                              title="Supprimer définitivement cet article"
+                            >
+                              {estEnCoursDeSuppression ? "Suppression..." : "🗑 Supprimer"}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       )}
 
