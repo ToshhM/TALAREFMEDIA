@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export default function InscriptionPage() {
+  const [pseudonyme, setPseudonyme] = useState("");
   const [nom, setNom] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,6 +17,13 @@ export default function InscriptionPage() {
     e.preventDefault();
     setChargement(true);
     setErreur(null);
+
+    const pseudoNettoye = pseudonyme.trim();
+    if (pseudoNettoye.length < 3) {
+      setErreur("Le pseudonyme doit comporter au moins 3 caractères.");
+      setChargement(false);
+      return;
+    }
 
     const supabase = createClient();
     if (!supabase) {
@@ -29,7 +37,9 @@ export default function InscriptionPage() {
       password,
       options: {
         data: {
-          full_name: nom,
+          pseudonyme: pseudoNettoye,
+          full_name: nom.trim() || pseudoNettoye,
+          role: "membre",
         },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
@@ -55,13 +65,13 @@ export default function InscriptionPage() {
             Inscription
           </h1>
           <p className="mt-1 text-sm text-gris">
-            Créez votre compte sur Talaref Média
+            Créez votre compte pour commenter et participer sur Talaref Média
           </p>
         </header>
 
         {succes ? (
-          <div className="rounded-md border border-arcade/40 bg-arcade/10 p-5 text-center text-sm text-blanc">
-            <h2 className="font-bold text-arcade">Vérifiez votre boîte e-mail</h2>
+          <div className="rounded-md border border-arena/40 bg-arena/10 p-5 text-center text-sm text-blanc">
+            <h2 className="font-bold text-arena">Vérifiez votre boîte e-mail</h2>
             <p className="mt-2 text-xs text-gris">
               Un e-mail de confirmation vient de vous être envoyé à{" "}
               <strong className="text-blanc">{email}</strong>. Cliquez sur le lien pour
@@ -70,7 +80,7 @@ export default function InscriptionPage() {
             <div className="mt-5">
               <Link
                 href="/connexion"
-                className="inline-block rounded bg-arcade px-4 py-2 text-xs font-bold text-noir hover:opacity-90"
+                className="inline-block rounded bg-arena px-4 py-2 text-xs font-bold text-noir hover:opacity-90"
               >
                 Se connecter
               </Link>
@@ -87,18 +97,37 @@ export default function InscriptionPage() {
             <form onSubmit={handleInscription} className="space-y-4">
               <div>
                 <label
+                  htmlFor="pseudonyme"
+                  className="block text-xs font-semibold uppercase tracking-wider text-gris"
+                >
+                  Pseudonyme (obligatoire, visible publiquement)
+                </label>
+                <input
+                  id="pseudonyme"
+                  type="text"
+                  required
+                  minLength={3}
+                  maxLength={30}
+                  value={pseudonyme}
+                  onChange={(e) => setPseudonyme(e.target.value)}
+                  placeholder="ex: Otaku92, CyberRef"
+                  className="mt-1.5 w-full rounded-md border border-ligne bg-noir p-3 text-sm text-blanc transition-colors focus:border-pop focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label
                   htmlFor="nom"
                   className="block text-xs font-semibold uppercase tracking-wider text-gris"
                 >
-                  Nom complet / Pseudo
+                  Nom complet (optionnel)
                 </label>
                 <input
                   id="nom"
                   type="text"
-                  required
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
-                  placeholder="Jean Dupont"
+                  placeholder="Prénom Nom"
                   className="mt-1.5 w-full rounded-md border border-ligne bg-noir p-3 text-sm text-blanc transition-colors focus:border-pop focus:outline-none"
                 />
               </div>

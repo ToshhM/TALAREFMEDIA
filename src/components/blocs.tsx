@@ -68,11 +68,11 @@ function RenduBloc({
       return (
         <figure className="my-10">
           <FacadeVideo
-            youtubeId={bloc.video.youtubeId}
+            youtubeId={bloc.video.youtubeId || (bloc.video as any).url || ""}
             titre={bloc.video.titre}
           />
           <figcaption className="etiquette mt-2">
-            La vidéo Talaref du sujet
+            {bloc.video.titre || "La vidéo Talaref du sujet"}
           </figcaption>
         </figure>
       );
@@ -94,7 +94,23 @@ function RenduBloc({
     case "image":
       return (
         <figure className="my-10">
-          <div className="aspect-video w-full bg-surface-2" role="img" aria-label={bloc.image.alt} />
+          <div
+            className="relative aspect-video w-full overflow-hidden rounded-md bg-surface-2 border border-ligne"
+            role="img"
+            aria-label={bloc.image.alt}
+          >
+            {bloc.image.url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={bloc.image.url}
+                alt={bloc.image.alt || ""}
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="texture" aria-hidden="true" />
+            )}
+          </div>
           <figcaption className="etiquette mt-2">
             {bloc.image.legende ? `${bloc.image.legende} · ` : ""}
             {bloc.image.credit}
@@ -105,19 +121,31 @@ function RenduBloc({
     case "galerie":
       return (
         <figure className="my-10">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
             {bloc.images.map((image, i) => (
               <div
                 key={i}
-                className="aspect-square bg-surface-2"
+                className="relative aspect-square overflow-hidden rounded-md bg-surface-2 border border-ligne"
                 role="img"
                 aria-label={image.alt}
-              />
+              >
+                {image.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={image.url}
+                    alt={image.alt || ""}
+                    className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="texture" aria-hidden="true" />
+                )}
+              </div>
             ))}
           </div>
           <figcaption className="etiquette mt-2">
-            {bloc.images.length} images ·{" "}
-            {[...new Set(bloc.images.map((i) => i.credit))].join(", ")}
+            {bloc.images.length} image{bloc.images.length > 1 ? "s" : ""} ·{" "}
+            {[...new Set(bloc.images.map((i) => i.credit).filter(Boolean))].join(", ") || "Talaref Media"}
           </figcaption>
         </figure>
       );

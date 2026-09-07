@@ -28,18 +28,38 @@ export function UserMenu() {
   }, []);
 
   if (user) {
-    const prenom =
-      user.user_metadata?.full_name?.split(" ")[0] ||
+    const pseudonyme =
+      user.user_metadata?.pseudonyme ||
+      user.user_metadata?.full_name ||
       user.email?.split("@")[0] ||
       "Compte";
 
+    const role =
+      user.email === "mpika.toshiro@talaref.co"
+        ? "admin"
+        : user.user_metadata?.role || user.app_metadata?.role || "membre";
+    const estAdmin = role === "admin";
+    const estRedacteur = role === "redacteur";
+
     return (
-      <Link
-        href="/compte"
-        className="rounded-sm border border-arcade/40 bg-arcade/10 px-2.5 py-1.5 text-xs font-bold text-arcade transition-colors hover:bg-arcade hover:text-noir"
-      >
-        {prenom}
-      </Link>
+      <div className="flex items-center gap-2">
+        {(estAdmin || estRedacteur) && (
+          <Link
+            href="/admin"
+            className="hidden rounded-sm border border-nexus/40 bg-nexus/10 px-2 py-1 text-xs font-bold text-nexus transition-colors hover:bg-nexus hover:text-noir sm:block"
+            title="Espace Rédaction & Administration"
+          >
+            Studio
+          </Link>
+        )}
+        <Link
+          href="/compte"
+          className="rounded-sm border border-pop/40 bg-pop/10 px-2.5 py-1.5 text-xs font-bold text-pop transition-colors hover:bg-pop hover:text-noir"
+          title={`Connecté en tant que ${pseudonyme}`}
+        >
+          {pseudonyme}
+        </Link>
+      </div>
     );
   }
 

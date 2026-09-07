@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { getArticles } from "@/lib/content";
-import { UNIVERS } from "@/lib/univers";
+import { UNIVERS, getCollectionsForUnivers } from "@/lib/univers";
 import { CarteArticle } from "@/components/carte-article";
 
 /**
- * La home : montrer la variété.
+ * La page d'accueil — Spécification v3.0 §11.
  *
- * Une une éditorialisée, puis les six univers en blocs de couleur. Le
- * fond reste STRICTEMENT noir — six accents sur un même écran, c'est la
- * couleur qui doit être contenue, pas le contenu.
+ * Une mise en avant éditorialisée, les six univers avec leurs repères
+ * visuels, et les dernières publications. Le fond reste strictement noir.
  */
 export default async function Home() {
   const articles = await getArticles();
@@ -37,24 +36,42 @@ export default async function Home() {
           Six univers
         </h2>
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {UNIVERS.map((u) => (
-            <li key={u.slug} data-u={u.slug}>
-              <Link
-                href={`/${u.slug}`}
-                className="carte-home relative flex h-full flex-col justify-between overflow-hidden p-5"
-              >
-                <div className="texture" aria-hidden="true" />
-                <div className="relative">
-                  <span className="pastille-code">{u.code}</span>
-                  <p className="mot-univers mt-4 text-3xl">{u.nom}</p>
-                  <p className="etiquette mt-2">{u.territoire}</p>
-                </div>
-                <p className="relative mt-6 line-clamp-3 text-sm text-gris">
-                  {u.description}
-                </p>
-              </Link>
-            </li>
-          ))}
+          {UNIVERS.map((u) => {
+            const collections = getCollectionsForUnivers(u.slug);
+            return (
+              <li key={u.slug} data-u={u.slug}>
+                <Link
+                  href={`/${u.slug}`}
+                  className="carte-home relative flex h-full flex-col justify-between overflow-hidden p-5"
+                >
+                  <div className="texture" aria-hidden="true" />
+                  <div className="relative">
+                    <div className="flex items-center justify-between">
+                      <span className="pastille-code">{u.code}</span>
+                      {collections.length > 0 ? (
+                        <div className="flex gap-1.5">
+                          {collections.map((c) => (
+                            <span
+                              key={c.slug}
+                              data-u={c.slug}
+                              className="etiquette rounded-xs border border-ligne px-1.5 py-0.5 text-[0.625rem] text-accent"
+                            >
+                              {c.nom}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                    <p className="mot-univers mt-4 text-3xl">{u.nom}</p>
+                    <p className="etiquette mt-2">{u.territoire}</p>
+                  </div>
+                  <p className="relative mt-6 line-clamp-3 text-sm text-gris">
+                    {u.description}
+                  </p>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </section>
 

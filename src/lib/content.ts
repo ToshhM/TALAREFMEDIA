@@ -5,7 +5,7 @@ import { ARTICLES_DEMO, PERSONNES_DEMO } from "./sample-data";
 import { supabase } from "./supabase";
 
 /**
- * Couche d'accès au contenu.
+ * Couche d'accès au contenu — Spécification v3.0.
  *
  * Tout le site passe par ces fonctions et par elles seules. Aucune page
  * n'interroge directement la base : le jour où la source change, il n'y a
@@ -35,16 +35,22 @@ async function tousLesArticles(): Promise<Article[]> {
 
       if (!error && data && data.length > 0) {
         return data.map((item) => ({
+          id: item.id,
           slug: item.slug,
+          refNumber: item.ref_number ?? undefined,
           titre: item.titre,
+          heroTitle: item.hero_title ?? undefined,
           chapo: item.chapo,
           imageDeUne: item.image_de_une,
           univers: item.univers,
-          rubrique: item.rubrique,
+          collection: item.collection ?? undefined,
+          rubrique: item.rubrique ?? undefined,
+          format: item.format ?? undefined,
           tags: item.tags || [],
           auteurs: item.auteurs || [],
           video: item.video || undefined,
           corps: item.corps || [],
+          status: item.status || "published",
           publieLe: item.publie_le,
           misAJourLe: item.mis_a_jour_le || undefined,
           tempsDeLecture: item.temps_de_lecture,
@@ -62,11 +68,20 @@ async function tousLesArticles(): Promise<Article[]> {
     );
   }
 
-  return trierParDate(ARTICLES_DEMO);
+  const { lireArticlesPersonnalises } = await import("./articles-store");
+  const custom = await lireArticlesPersonnalises();
+  const slugsCustom = new Set(custom.map((a) => a.slug));
+  const liste = [
+    ...custom,
+    ...ARTICLES_DEMO.filter((a) => !slugsCustom.has(a.slug)),
+  ];
+
+  return trierParDate(liste);
 }
 
 export async function getArticles(options?: {
   univers?: string;
+  collection?: string;
   rubrique?: string;
   tag?: string;
   auteur?: string;
@@ -79,8 +94,13 @@ export async function getArticles(options?: {
   if (options?.univers) {
     articles = articles.filter((a) => a.univers === options.univers);
   }
+  if (options?.collection) {
+    articles = articles.filter((a) => a.collection === options.collection);
+  }
   if (options?.rubrique) {
-    articles = articles.filter((a) => a.rubrique === options.rubrique);
+    articles = articles.filter(
+      (a) => a.rubrique === options.rubrique || a.collection === options.rubrique,
+    );
   }
   if (options?.tag) {
     articles = articles.filter((a) =>
@@ -117,13 +137,15 @@ export async function getArticle(
 
 /** Deux articles de rebond, générés automatiquement, non éditables. */
 export async function getALireAussi(article: Article): Promise<Article[]> {
-  const memeRubrique = await getArticles({
-    univers: article.univers,
-    rubrique: article.rubrique,
-    exclure: article.slug,
-    limite: 2,
-  });
-  if (memeRubrique.length === 2) return memeRubrique;
+  if (article.collection) {
+    const memeCollection = await getArticles({
+      univers: article.univers,
+      collection: article.collection,
+      exclure: article.slug,
+      limite: 2,
+    });
+    if (memeCollection.length === 2) return memeCollection;
+  }
 
   const memeUnivers = await getArticles({
     univers: article.univers,

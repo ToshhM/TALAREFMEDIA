@@ -36,15 +36,20 @@ async function seed() {
     const { error } = await supabase.from("articles").upsert(
       {
         slug: a.slug,
+        ref_number: a.refNumber || null,
         titre: a.titre,
+        hero_title: a.heroTitle || null,
         chapo: a.chapo,
         image_de_une: a.imageDeUne,
         univers: a.univers,
-        rubrique: a.rubrique,
+        collection: a.collection || null,
+        rubrique: a.rubrique || null,
+        format: a.format || null,
         tags: a.tags,
         auteurs: a.auteurs,
         video: a.video || null,
         corps: a.corps,
+        status: a.status || "published",
         publie_le: a.publieLe,
         mis_a_jour_le: a.misAJourLe || null,
         temps_de_lecture: a.tempsDeLecture,
@@ -58,10 +63,10 @@ async function seed() {
     }
   }
 
-  console.log("Seeding Supabase terminé avec succès !");
+  console.log("Seed terminé avec succès !");
 }
 
 seed().catch((err) => {
-  console.error("Erreur inattendue pendant le seeding:", err);
+  console.error("Erreur générale du seed:", err);
   process.exit(1);
 });

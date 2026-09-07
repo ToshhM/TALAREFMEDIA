@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getArticles, getPersonnes, getTags } from "@/lib/content";
-import { UNIVERS } from "@/lib/univers";
+import { COLLECTIONS, UNIVERS } from "@/lib/univers";
 import { SITE } from "@/lib/site";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -27,13 +27,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     })),
 
-    ...UNIVERS.flatMap((univers) =>
-      univers.rubriques.map((r) => ({
-        url: u(`/${univers.slug}/r/${r.slug}`),
-        changeFrequency: "weekly" as const,
-        priority: 0.6,
-      })),
-    ),
+    ...COLLECTIONS.map((collection) => ({
+      url: u(`/${collection.parent}/c/${collection.slug}`),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    })),
 
     ...articles.map((a) => ({
       url: u(`/${a.univers}/${a.slug}`),

@@ -1,7 +1,7 @@
-import type { UniversSlug } from "./univers";
+import type { CollectionSlug, UniverseSlug } from "./univers";
 
 /**
- * Le jeu de blocs FERMÉ — architecture V1 §03.
+ * Le jeu de blocs FERMÉ — architecture de rédaction intacte.
  *
  * Quatorze blocs, pas un de plus. Le rédacteur ne peut pas mettre en
  * forme, il ne peut que choisir un bloc : la cohérence n'est plus une
@@ -87,23 +87,89 @@ export type Tag = {
   nom: string;
 };
 
+export type ArticleStatus =
+  | "draft"
+  | "review"
+  | "scheduled"
+  | "published"
+  | "archived";
+
 export type Article = {
+  id?: string;
   slug: string;
+  /** Numéro REF unique et immuable par univers (§07). */
+  refNumber?: number;
   /** 30 à 65 signes — au-delà, tronqué dans Google. */
   titre: string;
+  /** Titre alternatif calibré pour le Hero en une. */
+  heroTitle?: string;
   /** 200 à 320 signes — résumé, méta-description et accroche sur la home. */
   chapo: string;
   imageDeUne: Image;
-  univers: UniversSlug;
-  /** Doit appartenir à l'univers choisi. */
-  rubrique: string;
+  /** Univers propriétaire (obligatoire). */
+  univers: UniverseSlug;
+  /** Collection propriétaire (optionnel, ex: encre ou arcade sous pop). */
+  collection?: CollectionSlug;
+  /** Ancien champ de rubrique, conservé pour compatibilité ascendante. */
+  rubrique?: string;
+  /** Format optionnel réservé V2 (test, décryptage, portrait…). */
+  format?: string;
   tags: Tag[];
   /** Un article non signé n'est pas publiable. */
   auteurs: Personne[];
   video?: Video;
   corps: Bloc[];
+  status?: ArticleStatus;
   publieLe: string;
   misAJourLe?: string;
   /** Jamais saisi à la main — 230 mots/minute, recalculé à la sauvegarde. */
   tempsDeLecture: number;
 };
+
+/**
+ * Mise en avant manuelle d'un article en Hero (Spécification v3.0 §10 & §12)
+ */
+export type FeaturedSlot = {
+  id: string;
+  scope: "homepage" | UniverseSlug;
+  articleId: string;
+  startAt?: string;
+  endAt?: string;
+  active: boolean;
+  customTitle?: string;
+  customImage?: string;
+};
+
+/**
+ * Sujets éditoriaux actifs du bandeau « En ce moment » (§10 & §13)
+ */
+export type TrendingTopic = {
+  id: string;
+  label: string;
+  href: string;
+  active: boolean;
+  order: number;
+  startAt?: string;
+  endAt?: string;
+};
+
+export type UserRole = "membre" | "redacteur" | "admin";
+
+export type Commentaire = {
+  id: string;
+  articleSlug: string;
+  userId: string;
+  userPseudonyme: string;
+  userRole?: UserRole;
+  contenu: string;
+  createdAt: string;
+};
+
+export type UserProfile = {
+  id: string;
+  email: string;
+  pseudonyme: string;
+  role: UserRole;
+  createdAt: string;
+};
+

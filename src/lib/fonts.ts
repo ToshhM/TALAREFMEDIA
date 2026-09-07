@@ -11,10 +11,10 @@ import {
 } from "next/font/google";
 
 /**
- * Les neuf polices du système — charte V1 §01.
+ * Les polices du système — Spécification v3.0 §04.
  *
- * Trois polices de socle, identiques partout, plus six polices de
- * signature, une par univers. Une police de signature ne sert JAMAIS au
+ * Trois polices de socle, identiques partout, plus les polices de
+ * signature d'univers et de collections. Une police de signature ne sert JAMAIS au
  * texte courant ni aux sous-titres : elle porte le mot d'univers et les
  * grands titres d'accroche, rien d'autre.
  *
@@ -23,7 +23,7 @@ import {
 
 /* ---- Socle ---- */
 
-/** Texte courant, interface, sous-titres. */
+/** Texte courant, interface, sous-titres. Sert aussi pour ARENA en variante étendue. */
 export const archivo = Archivo({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -47,9 +47,9 @@ export const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-/* ---- Signatures d'univers ---- */
+/* ---- Signatures d'univers et collections ---- */
 
-/** ARCADE — bitmap 8 bits, réservée aux mots courts (9 signes maximum). */
+/** ARCADE (collection sous Pop) — bitmap 8 bits, max 9 signes. */
 export const pressStart = Press_Start_2P({
   subsets: ["latin"],
   weight: "400",
@@ -57,7 +57,7 @@ export const pressStart = Press_Start_2P({
   display: "swap",
 });
 
-/** ENCRE — display japonais à trait épais, excellente sur un ou deux mots. */
+/** ENCRE (collection sous Pop) — display japonais à trait épais. */
 export const reggaeOne = Reggae_One({
   subsets: ["latin"],
   weight: "400",

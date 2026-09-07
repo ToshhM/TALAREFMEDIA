@@ -3,11 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getALireAussi, getArticle, getArticles } from "@/lib/content";
-import { getRubrique, getUnivers } from "@/lib/univers";
+import { formaterRef, getCollection, getUnivers } from "@/lib/univers";
 import { SITE, dureeISO, formaterDate, formaterDuree, urlAbsolue } from "@/lib/site";
 import { RenduBlocs } from "@/components/blocs";
 import { BarreProgression } from "@/components/barre-progression";
 import { PastilleCode } from "@/components/pastille-code";
+import { CommentairesArticle } from "@/components/commentaires-article";
+import { FacadeVideo } from "@/components/facade-video";
 
 type Params = { univers: string; slug: string };
 
@@ -29,8 +31,6 @@ export async function generateMetadata({
 
   return {
     title: article.titre,
-    // Le chapô fait office de méta-description : 200 à 320 signes, calibré
-    // pour ne pas être tronqué dans les résultats de recherche.
     description: article.chapo,
     alternates: { canonical: url },
     openGraph: {
@@ -46,14 +46,11 @@ export async function generateMetadata({
 }
 
 /**
- * La page d'article : faire lire.
+ * La page d'article — Spécification v3.0 §02, §07 & §14.
  *
- * Colonne unique, 65 caractères de large. Retour au dosage 80/15/5 :
- * l'accent ne sert plus qu'aux liens, aux encadrés, à la barre de
- * progression et au badge d'univers. La vidéo est un module DANS
- * l'article, placé avant le premier intertitre — elle n'a pas de page
- * à elle, et c'est ce qui garantit qu'aucun contenu Talaref ne se fait
- * concurrence à lui-même dans les résultats de recherche.
+ * Règle de couleur (§2.3) : quand une collection s'applique, c'est elle
+ * qui donne sa couleur à la page, pas son univers.
+ * L'architecture de rédaction (14 blocs fermés, colonne de 65ch) reste strictement préservée.
  */
 export default async function PageArticle({
   params,
@@ -67,13 +64,12 @@ export default async function PageArticle({
   const univers = getUnivers(article.univers);
   if (!univers) notFound();
 
-  const rubrique = getRubrique(article.univers, article.rubrique);
+  const collection = article.collection ? getCollection(article.collection) : undefined;
+  const territoireActif = collection ?? univers;
   const aLireAussi = await getALireAussi(article);
   const url = urlAbsolue(`/${article.univers}/${article.slug}`);
+  const refLabel = formaterRef(article.univers, article.refNumber, article.collection);
 
-  /* Deux descriptions structurées sur la MÊME page : Google peut afficher
-     la vignette vidéo dans ses résultats tout en indexant le texte. C'est
-     le gain principal de l'architecture retenue. */
   const donneesStructurees = [
     {
       "@context": "https://schema.org",
@@ -89,7 +85,7 @@ export default async function PageArticle({
       })),
       publisher: { "@type": "Organization", name: SITE.nomComplet },
       mainEntityOfPage: url,
-      articleSection: rubrique?.nom ?? article.rubrique,
+      articleSection: collection?.nom ?? univers.nom,
       inLanguage: SITE.langue,
     },
     ...(article.video
@@ -110,7 +106,7 @@ export default async function PageArticle({
   ];
 
   return (
-    <main data-u={univers.slug}>
+    <main data-u={territoireActif.slug}>
       <BarreProgression />
 
       <script
@@ -123,21 +119,25 @@ export default async function PageArticle({
           <Link href={`/${univers.slug}`} className="hover:text-accent">
             {univers.nom}
           </Link>
-          {rubrique ? (
+          {collection ? (
             <>
               <span aria-hidden="true"> / </span>
               <Link
-                href={`/${univers.slug}/r/${rubrique.slug}`}
-                className="hover:text-accent"
+                href={`/${univers.slug}/c/${collection.slug}`}
+                className="font-semibold text-accent hover:underline"
               >
-                {rubrique.nom}
+                {collection.nom}
               </Link>
             </>
           ) : null}
         </nav>
 
         <header className="mb-10">
-          <PastilleCode univers={univers} />
+          <div className="flex flex-wrap items-center gap-3">
+            <PastilleCode territoire={territoireActif} />
+            <span className="badge-ref">{refLabel}</span>
+          </div>
+
           <h1 className="titre-article mt-5 text-balance text-3xl sm:text-5xl">
             {article.titre}
           </h1>
@@ -165,7 +165,6 @@ export default async function PageArticle({
             <span>{formaterDuree(article.tempsDeLecture)}</span>
           </p>
 
-          {/* Affiché seulement si l'écart dépasse 30 jours. */}
           {article.misAJourLe &&
           Date.parse(article.misAJourLe) - Date.parse(article.publieLe) >
             30 * 24 * 3600 * 1000 ? (
@@ -179,18 +178,39 @@ export default async function PageArticle({
           {article.chapo}
         </p>
 
-        <figure className="mb-10">
-          <div
-            className="relative aspect-video w-full overflow-hidden bg-surface-2"
-            role="img"
-            aria-label={article.imageDeUne.alt}
-          >
-            <div className="texture" aria-hidden="true" />
-          </div>
-          <figcaption className="etiquette mt-2">
-            {article.imageDeUne.credit}
-          </figcaption>
-        </figure>
+        {article.video ? (
+          <figure className="mb-10">
+            <FacadeVideo
+              youtubeId={article.video.youtubeId}
+              titre={article.video.titre}
+            />
+            <figcaption className="etiquette mt-2">
+              {article.video.titre || "Vidéo Talaref"}
+            </figcaption>
+          </figure>
+        ) : (
+          <figure className="mb-10">
+            <div
+              className="relative aspect-video w-full overflow-hidden rounded-md bg-surface-2 border border-ligne"
+              role="img"
+              aria-label={article.imageDeUne.alt}
+            >
+              {article.imageDeUne.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={article.imageDeUne.url}
+                  alt={article.imageDeUne.alt || article.titre}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="texture" aria-hidden="true" />
+              )}
+            </div>
+            <figcaption className="etiquette mt-2">
+              {article.imageDeUne.credit}
+            </figcaption>
+          </figure>
+        )}
 
         <div className="corps-article">
           <RenduBlocs blocs={article.corps} aLireAussi={aLireAussi} />
@@ -213,6 +233,8 @@ export default async function PageArticle({
             </ul>
           </footer>
         ) : null}
+
+        <CommentairesArticle articleSlug={article.slug} />
       </article>
     </main>
   );

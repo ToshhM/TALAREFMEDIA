@@ -1,19 +1,20 @@
 /**
- * Mots réservés — piège à éviter, architecture V1 §06.
+ * Mots réservés — piège à éviter, Spécification v3.0 §09.
  *
  * Les URL d'article vivent à /<univers>/<slug>. Sans cette liste,
- * /arcade/tests désignerait aussi bien la rubrique « Test » qu'un article
- * dont le slug serait « tests ». Le back-office doit refuser un slug
- * d'article qui emploie l'un de ces mots.
+ * /pop/c désignerait aussi bien la collection qu'un article.
+ * Le back-office doit refuser un slug d'article qui emploie l'un de ces mots.
  */
 export const SLUGS_RESERVES = [
-  "r", // /arcade/r/tests — le segment qui introduit une rubrique
+  "c", // /pop/c/encre — le segment qui introduit une collection (§09)
+  "r", // ancien segment de rubrique (redirections 301)
   "tag",
   "videos",
   "auteurs",
   "recherche",
   "preview",
   "studio",
+  "admin",
   "rss.xml",
   "sitemap.xml",
   "robots.txt",

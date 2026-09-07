@@ -1,46 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&display=swap');
 @import "tailwindcss";
 
 /* ============================================================
-   TOKENS — charte graphique V1 §04
+   TOKENS — Spécification v3.0 §03 & §06
    Un seul attribut sur le conteneur, et toute la page bascule
-   dans l'univers du contenu : <main data-u="agora">
+   dans l'univers ou la collection du contenu : <main data-u="nexus">
    ============================================================ */
 
 :root {
   /* Neutres — ne changent jamais. Ils tirent vers le bleu-violet :
-     ils restent neutres à côté des six accents sans en réchauffer un. */
+     ils restent neutres à côté des huit accents sans en réchauffer un. */
   --noir: #0b0b0c;
   --surface: #141418;
   --surface-2: #1c1c22;
   --ligne: #2c2c34;
   --gris: #9b9ba6;
+  --gris-clair: #c9c9d2;
   --blanc: #f5f5f3;
 
-  /* Accents d'univers */
-  --arcade: #a3ff3d;
-  --encre: #ff4a3d;
+  /* Les huit accents — Spécification v3.0 §3.2 (écart de teinte min 32°, contraste > 4.5:1) */
   --pop: #ffc53d;
+  --arena: #a8f53d;
+  --nexus: #39ff88;
+  --objectif: #3de0ff;
   --agora: #5b8dff;
   --bpm: #c05cff;
-  --objectif: #3de0ff;
+  --arcade: #ff3da5;
+  --encre: #ff4a3d;
 
-  /* Valeurs pilotées par l'univers courant. Par défaut : Arcade. */
-  --accent: var(--arcade);
-  --signature: var(--font-press-start), monospace;
+  /* Valeurs pilotées par l'univers ou la collection courante. Par défaut : Pop. */
+  --accent: var(--pop);
+  --signature: var(--font-bungee), sans-serif;
+  --sig-stretch: 100%;
+  --sig-weight: 400;
   --teinte: color-mix(in srgb, var(--accent) 13%, var(--noir));
 }
 
-[data-u="arcade"] {
-  --accent: var(--arcade);
-  --signature: var(--font-press-start), monospace;
-}
-[data-u="encre"] {
-  --accent: var(--encre);
-  --signature: var(--font-reggae-one), sans-serif;
-}
 [data-u="pop"] {
   --accent: var(--pop);
   --signature: var(--font-bungee), sans-serif;
+}
+[data-u="arena"] {
+  --accent: var(--arena);
+  --signature: var(--font-archivo), sans-serif;
+  --sig-stretch: 125%;
+  --sig-weight: 700;
+}
+[data-u="nexus"] {
+  --accent: var(--nexus);
+  --signature: "Chakra Petch", sans-serif;
+  --sig-weight: 700;
+}
+[data-u="objectif"] {
+  --accent: var(--objectif);
+  --signature: var(--font-dm-mono), monospace;
 }
 [data-u="agora"] {
   --accent: var(--agora);
@@ -50,9 +63,13 @@
   --accent: var(--bpm);
   --signature: var(--font-anton), sans-serif;
 }
-[data-u="objectif"] {
-  --accent: var(--objectif);
-  --signature: var(--font-dm-mono), monospace;
+[data-u="encre"] {
+  --accent: var(--encre);
+  --signature: var(--font-reggae-one), sans-serif;
+}
+[data-u="arcade"] {
+  --accent: var(--arcade);
+  --signature: var(--font-press-start), monospace;
 }
 
 [data-u] {
@@ -66,18 +83,20 @@
   --color-surface-2: var(--surface-2);
   --color-ligne: var(--ligne);
   --color-gris: var(--gris);
+  --color-gris-clair: var(--gris-clair);
   --color-blanc: var(--blanc);
   --color-accent: var(--accent);
   --color-teinte: var(--teinte);
 
-  /* Les six accents nommés, pour les rares cas où il faut désigner un
-     univers précis hors de son contexte (pastilles, legendes, alertes). */
-  --color-arcade: var(--arcade);
-  --color-encre: var(--encre);
+  /* Les huit accents nommés */
   --color-pop: var(--pop);
+  --color-arena: var(--arena);
+  --color-nexus: var(--nexus);
+  --color-objectif: var(--objectif);
   --color-agora: var(--agora);
   --color-bpm: var(--bpm);
-  --color-objectif: var(--objectif);
+  --color-arcade: var(--arcade);
+  --color-encre: var(--encre);
 
   --font-corps: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
   --font-titre: var(--font-archivo-black), ui-sans-serif, system-ui, sans-serif;
@@ -138,7 +157,7 @@ video {
 }
 
 /* ============================================================
-   CLASSES DE MARQUE — charte V1, usage.css
+   CLASSES DE MARQUE — Spécification v3.0 §03, §04 & §07
    ============================================================ */
 
 /* « TALAREF » se pose en JetBrains Mono capitales, interlettrage 0.34em.
@@ -151,14 +170,16 @@ video {
   color: var(--blanc);
 }
 
-/* Le mot d'univers, en police de signature et en couleur d'accent. */
+/* Le mot d'univers ou de collection, en police de signature et en couleur d'accent. */
 .mot-univers {
   font-family: var(--signature);
+  font-stretch: var(--sig-stretch, 100%);
+  font-weight: var(--sig-weight, 400);
   color: var(--accent);
   line-height: 1;
 }
 
-/* La pastille de code à trois lettres. */
+/* La pastille de code à trois lettres (POP, ARE, NEX, ENC...). */
 .pastille-code {
   display: inline-block;
   background: var(--accent);
@@ -170,6 +191,18 @@ video {
   text-transform: uppercase;
   padding: 0.25rem 0.5rem;
   line-height: 1;
+}
+
+/* Badge de signature REF (§07) : REF:POP/023, REF:NEXUS/017 */
+.badge-ref {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 /* Étiquette de service : dates, durées, crédits, numéros. */
@@ -211,8 +244,8 @@ video {
 }
 
 /* ============================================================
-   TEXTURES D'UNIVERS — la texture passe derrière l'image,
-   jamais par-dessus le texte.
+   TEXTURES D'UNIVERS ET COLLECTIONS — Spécification v3.0 §05
+   La texture passe toujours DERRIÈRE l'image, jamais par-dessus le texte.
    ============================================================ */
 
 .texture {
@@ -222,25 +255,7 @@ video {
   opacity: 0.15;
 }
 
-/* ARCADE — grille de pixels 22 px + scanlines horizontales. */
-[data-u="arcade"] .texture {
-  background-image:
-    linear-gradient(var(--accent) 1px, transparent 1px),
-    linear-gradient(90deg, var(--accent) 1px, transparent 1px);
-  background-size: 22px 22px;
-}
-
-/* ENCRE — trame de demi-teintes 7 px et lignes de vitesse à 118°. */
-[data-u="encre"] .texture {
-  background-image: repeating-linear-gradient(
-    118deg,
-    var(--accent) 0 1px,
-    transparent 1px 7px
-  );
-}
-
-/* POP — bandes diagonales à 45° et trame pointillée.
-   Seul univers où deux textures peuvent se superposer. */
+/* POP — bandes diagonales à 45° et trame pointillée. */
 [data-u="pop"] .texture {
   background-image:
     repeating-linear-gradient(
@@ -252,8 +267,36 @@ video {
   background-size: auto, 12px 12px;
 }
 
-/* AGORA — quadrillage fin de 44 px, filets et colonnes.
-   Aucune texture organique, aucun effet lumineux, jamais de glitch. */
+/* ARENA — tracés de terrain : lignes franches, arc de cercle central, maille de filet. */
+[data-u="arena"] .texture {
+  background-image:
+    linear-gradient(var(--accent) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, var(--accent) 1.5px, transparent 1.5px),
+    radial-gradient(circle at center, transparent 40px, var(--accent) 40px, var(--accent) 42px, transparent 42px);
+  background-size: 60px 60px, 60px 60px, 160px 160px;
+  background-position: center;
+  opacity: 0.12;
+}
+
+/* NEXUS — matrice de points fine + ligne de signal horizontale + curseur. */
+[data-u="nexus"] .texture {
+  background-image:
+    radial-gradient(var(--accent) 1px, transparent 1px),
+    linear-gradient(to bottom, transparent 49%, var(--accent) 50%, transparent 51%);
+  background-size: 16px 16px, 100% 32px;
+  opacity: 0.14;
+}
+
+/* OBJECTIF — grille de tiers et repères de recadrage. */
+[data-u="objectif"] .texture {
+  background-image:
+    linear-gradient(var(--accent) 1px, transparent 1px),
+    linear-gradient(90deg, var(--accent) 1px, transparent 1px);
+  background-size: 33.333% 33.333%;
+  opacity: 0.18;
+}
+
+/* AGORA — quadrillage fin de 44 px, filets et colonnes. */
 [data-u="agora"] .texture {
   background-image:
     linear-gradient(var(--accent) 1px, transparent 1px),
@@ -276,19 +319,28 @@ video {
   background-repeat: no-repeat, repeat-x;
 }
 
-/* OBJECTIF — grille de tiers et repères de recadrage. */
-[data-u="objectif"] .texture {
+/* ENCRE (collection) — trame de demi-teintes 7 px et lignes de vitesse à 118°. */
+[data-u="encre"] .texture {
+  background-image: repeating-linear-gradient(
+    118deg,
+    var(--accent) 0 1px,
+    transparent 1px 7px
+  );
+  opacity: 0.16;
+}
+
+/* ARCADE (collection) — grille de pixels 22 px + scanlines horizontales. */
+[data-u="arcade"] .texture {
   background-image:
     linear-gradient(var(--accent) 1px, transparent 1px),
     linear-gradient(90deg, var(--accent) 1px, transparent 1px);
-  background-size: 33.333% 33.333%;
-  opacity: 0.2;
+  background-size: 22px 22px;
+  opacity: 0.15;
 }
 
 /* ============================================================
-   HOME — six couleurs sur un même écran, c'est beaucoup.
-   On les contient : filet de 3 px en haut de chaque carte,
-   pastille de code, et rien d'autre. Le fond reste noir.
+   HOME — La couleur reste à l'intérieur des cartes (Spécification §3.3) :
+   filet de 3 px en haut de chaque carte, pastille de code, fond strictement noir.
    ============================================================ */
 
 .carte-home {

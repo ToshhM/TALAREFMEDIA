@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getArticles } from "@/lib/content";
-import { UNIVERS, getUnivers } from "@/lib/univers";
+import { UNIVERS, getCollectionsForUnivers, getUnivers } from "@/lib/univers";
 import { SITE } from "@/lib/site";
 import { CarteArticle } from "@/components/carte-article";
 
@@ -39,8 +39,7 @@ export async function generateMetadata({
  * La page d'univers : ouvrir en grand.
  *
  * C'est le SEUL endroit du site où la couleur d'accent peut occuper une
- * pleine largeur. Les rubriques du territoire sont des filtres visibles,
- * pas un menu déroulant.
+ * pleine largeur. Les collections et tags sont présentés en filtres visibles.
  */
 export default async function PageUnivers({
   params,
@@ -51,7 +50,17 @@ export default async function PageUnivers({
   const univers = getUnivers(slug);
   if (!univers) notFound();
 
-  const articles = await getArticles({ univers: univers.slug });
+  const [articles, collections] = await Promise.all([
+    getArticles({ univers: univers.slug }),
+    getCollectionsForUnivers(univers.slug),
+  ]);
+
+  // Extraction des tags spécifiques à cet univers
+  const tagsUnivers = Array.from(
+    new Map(
+      articles.flatMap((a) => a.tags).map((t) => [t.slug, t]),
+    ).values(),
+  );
 
   return (
     <main data-u={univers.slug}>
@@ -70,20 +79,45 @@ export default async function PageUnivers({
       </header>
 
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-        <nav aria-label={`Rubriques de ${univers.nom}`} className="mb-10">
-          <ul className="flex flex-wrap gap-2">
-            {univers.rubriques.map((r) => (
-              <li key={r.slug}>
-                <Link
-                  href={`/${univers.slug}/r/${r.slug}`}
-                  className="block border border-ligne px-3 py-1.5 text-sm text-gris transition-colors hover:border-accent hover:text-accent"
-                >
-                  {r.nom}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        {collections.length > 0 || tagsUnivers.length > 0 ? (
+          <nav aria-label={`Territoires de ${univers.nom}`} className="mb-10 flex flex-col gap-4">
+            {collections.length > 0 ? (
+              <div>
+                <p className="etiquette mb-2">Collections</p>
+                <ul className="flex flex-wrap gap-2">
+                  {collections.map((c) => (
+                    <li key={c.slug} data-u={c.slug}>
+                      <Link
+                        href={`/${univers.slug}/c/${c.slug}`}
+                        className="block border border-ligne px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:border-accent hover:bg-teinte"
+                      >
+                        {c.nom} <span className="text-xs text-gris">({c.territoire})</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {tagsUnivers.length > 0 ? (
+              <div>
+                <p className="etiquette mb-2">Sujets</p>
+                <ul className="flex flex-wrap gap-2">
+                  {tagsUnivers.map((t) => (
+                    <li key={t.slug}>
+                      <Link
+                        href={`/tag/${t.slug}`}
+                        className="block border border-ligne px-3 py-1 text-xs text-gris transition-colors hover:border-accent hover:text-accent"
+                      >
+                        {t.nom}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </nav>
+        ) : null}
 
         {articles.length === 0 ? (
           <p className="text-gris">
