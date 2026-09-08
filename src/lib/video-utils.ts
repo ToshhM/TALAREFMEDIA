@@ -44,15 +44,43 @@ export function estFichierVideoDirect(url: string): boolean {
 }
 
 /**
+ * Extrait l'identifiant Vimeo d'une URL complète ou d'un identifiant numérique.
+ * Exemples supportés :
+ * - https://vimeo.com/76979871
+ * - https://vimeo.com/channels/staffpicks/76979871
+ * - https://player.vimeo.com/video/76979871
+ * - 76979871
+ */
+export function extraireIdVimeo(input: string): string | null {
+  if (!input) return null;
+  const nettoye = input.trim();
+
+  // Si c'est déjà un identifiant numérique (6 à 12 chiffres)
+  if (/^\d{6,12}$/.test(nettoye)) {
+    return nettoye;
+  }
+
+  // Regex d'extraction d'URL Vimeo
+  const regex = /(?:vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/[^\/]*\/videos\/|album\/(?:\d+\/)?video\/|video\/|)|player\.vimeo\.com\/video\/)(\d{6,12})/;
+  const match = nettoye.match(regex);
+  return match ? match[1] : null;
+}
+
+/**
  * Normalise une source vidéo pour déterminer son type et sa valeur exploitable.
  */
 export function parserSourceVideo(source: string): {
-  type: "youtube" | "direct" | "inconnu";
+  type: "youtube" | "vimeo" | "direct" | "inconnu";
   valeur: string;
 } {
   const youtubeId = extraireIdYouTube(source);
   if (youtubeId) {
     return { type: "youtube", valeur: youtubeId };
+  }
+
+  const vimeoId = extraireIdVimeo(source);
+  if (vimeoId) {
+    return { type: "vimeo", valeur: vimeoId };
   }
 
   if (estFichierVideoDirect(source) || source.startsWith("http://") || source.startsWith("https://") || source.startsWith("/")) {

@@ -38,6 +38,17 @@ type FormBloc = {
 };
 
 async function televerserFichier(file: File): Promise<string> {
+  // Limite stricte pour les images : 2 Mo maximum pour ne pas ralentir le site
+  const estImage =
+    file.type.startsWith("image/") ||
+    /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.name);
+  if (estImage && file.size > 2 * 1024 * 1024) {
+    const tailleMo = (file.size / (1024 * 1024)).toFixed(2);
+    throw new Error(
+      `L'image « ${file.name} » fait ${tailleMo} Mo. La limite stricte est de 2 Mo maximum afin de garantir la fluidité du site. Veuillez compresser votre image.`,
+    );
+  }
+
   const fd = new FormData();
   fd.append("file", file);
   const res = await fetch("/api/admin/upload", {
@@ -84,13 +95,13 @@ function BlocImageEditor({
         <div className="flex flex-col items-center justify-center rounded-md border-2 border-dashed border-ligne/70 bg-noir/40 p-6 text-center">
           <span className="text-3xl mb-2">📷</span>
           <p className="text-xs font-bold text-blanc">
-            Téléverser une photo ou coller un lien
+            Téléverser une photo ou coller un lien direct
           </p>
           <p className="text-[0.6875rem] text-gris mt-1 mb-3">
-            Formats pris en charge : JPG, PNG, WebP (max 15 Mo)
+            Formats : JPG, PNG, WebP (max 2 Mo) · Ou collez directement une URL ci-dessous
           </p>
           <label className="cursor-pointer rounded border border-ligne bg-surface-2 px-3 py-1.5 text-xs font-bold text-blanc hover:bg-ligne">
-            {enCours ? "Upload en cours..." : "Choisir un fichier image"}
+            {enCours ? "Upload en cours..." : "Choisir un fichier image (≤ 2 Mo)"}
             <input
               type="file"
               accept="image/*"
@@ -120,7 +131,7 @@ function BlocImageEditor({
           type="text"
           value={bloc.url || ""}
           onChange={(e) => modifierBloc(index, "url", e.target.value)}
-          placeholder="Ou coller une URL d'image (https://...)"
+          placeholder="Lien web direct de l'image (ex: https://images.unsplash.com/...)"
           className="rounded border border-ligne bg-noir p-2 text-xs text-blanc sm:col-span-2 focus:border-nexus focus:outline-none"
         />
         <input
@@ -171,7 +182,7 @@ function BlocVideoEditor({
             type="text"
             value={bloc.youtubeId || ""}
             onChange={(e) => modifierBloc(index, "youtubeId", e.target.value)}
-            placeholder="Lien YouTube (ex: https://youtube.com/watch?v=...) ou fichier vidéo"
+            placeholder="Lien YouTube (youtube.com/...), Vimeo (vimeo.com/...) ou fichier vidéo direct"
             className="w-full rounded border border-ligne bg-noir p-2 text-xs text-blanc focus:border-nexus focus:outline-none"
           />
           <label className="shrink-0 cursor-pointer rounded border border-ligne bg-surface-2 px-3 py-2 text-xs font-bold text-blanc hover:bg-ligne flex items-center gap-1">
@@ -202,7 +213,7 @@ function BlocVideoEditor({
           type="text"
           value={bloc.titre || ""}
           onChange={(e) => modifierBloc(index, "titre", e.target.value)}
-          placeholder="Titre de la vidéo"
+          placeholder="Titre ou légende de la vidéo"
           className="rounded border border-ligne bg-noir p-2 text-xs text-blanc focus:border-nexus focus:outline-none"
         />
       </div>
@@ -210,7 +221,7 @@ function BlocVideoEditor({
       {bloc.youtubeId ? (
         <div className="mt-3">
           <p className="mb-1.5 font-mono text-[0.625rem] uppercase text-gris">
-            Aperçu de la vidéo dans l'article :
+            Aperçu de la vidéo dans l'article (YouTube, Vimeo ou lecteur direct) :
           </p>
           <div className="max-w-md">
             <FacadeVideo
@@ -234,12 +245,14 @@ function BlocGalerieEditor({
   modifierBloc: (index: number, champ: string, valeur: any) => void;
 }) {
   const [enCours, setEnCours] = useState(false);
+  const [urlAjout, setUrlAjout] = useState("");
   const images = bloc.images || [];
 
   const ajouterImage = (url: string) => {
+    if (!url.trim()) return;
     modifierBloc(index, "images", [
       ...images,
-      { url, alt: "", credit: "Talaref Media" },
+      { url: url.trim(), alt: "", credit: "Talaref Media" },
     ]);
   };
 
@@ -253,12 +266,12 @@ function BlocGalerieEditor({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-mono text-xs text-gris">
-          {images.length} photo{images.length > 1 ? "s" : ""} dans la galerie
+          {images.length} photo{images.length > 1 ? "s" : ""} dans la galerie (max 2 Mo par upload ou liens web)
         </span>
         <label className="cursor-pointer rounded border border-ligne bg-surface-2 px-3 py-1 text-xs font-bold text-blanc hover:bg-ligne">
-          {enCours ? "Téléversement..." : "+ Ajouter des photos"}
+          {enCours ? "Téléversement..." : "+ Uploader photos (≤ 2 Mo)"}
           <input
             type="file"
             accept="image/*"
@@ -282,6 +295,29 @@ function BlocGalerieEditor({
             }}
           />
         </label>
+      </div>
+
+      {/* Ajout d'image par lien URL direct */}
+      <div className="flex gap-2">
+        <input
+          type="url"
+          value={urlAjout}
+          onChange={(e) => setUrlAjout(e.target.value)}
+          placeholder="Ou ajouter une photo par lien URL (ex: https://images.unsplash.com/...)"
+          className="flex-1 rounded border border-ligne bg-noir p-2 text-xs text-blanc placeholder-gris/50 focus:border-nexus focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => {
+            if (urlAjout.trim()) {
+              ajouterImage(urlAjout);
+              setUrlAjout("");
+            }
+          }}
+          className="rounded border border-ligne bg-surface-2 px-3 py-2 text-xs font-bold text-blanc hover:bg-ligne transition-colors"
+        >
+          + Ajouter via URL
+        </button>
       </div>
 
       {images.length > 0 ? (
@@ -1042,7 +1078,7 @@ export default function AdminPage() {
               <div className="mb-10 rounded-lg border border-ligne/70 bg-noir/40 p-5">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-blanc">
-                    Image de couverture (16:9)
+                    Image de couverture (16:9) — max 2 Mo ou lien web direct
                   </p>
                   {imageUrl && (
                     <button
@@ -1077,7 +1113,7 @@ export default function AdminPage() {
                         type="url"
                         value={imageUrl}
                         onChange={(e) => setImageUrl(e.target.value)}
-                        placeholder="Coller l'URL d'une image (https://...)"
+                        placeholder="Coller l'URL directe d'une image (ex: https://images.unsplash.com/...)"
                         className="w-full rounded border border-ligne bg-noir p-2 text-xs text-blanc focus:border-nexus focus:outline-none"
                       />
                       <label className="shrink-0 cursor-pointer rounded border border-ligne bg-surface-2 px-3 py-2 text-xs font-bold text-blanc transition-colors hover:bg-ligne flex items-center gap-1.5">
@@ -1086,7 +1122,7 @@ export default function AdminPage() {
                         ) : (
                           <>
                             <span>📷</span>
-                            <span>Uploader</span>
+                            <span>Uploader (≤ 2 Mo)</span>
                           </>
                         )}
                         <input
@@ -1139,7 +1175,7 @@ export default function AdminPage() {
               <div className="mb-10 rounded-lg border border-ligne/70 bg-noir/40 p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-gris">
-                    Vidéo principale de l'article (optionnel)
+                    Vidéo principale de l'article (YouTube, Vimeo ou vidéo directe)
                   </span>
                   {videoPrincipaleUrl && (
                     <button
@@ -1156,7 +1192,7 @@ export default function AdminPage() {
                     type="text"
                     value={videoPrincipaleUrl}
                     onChange={(e) => setVideoPrincipaleUrl(e.target.value)}
-                    placeholder="Lien YouTube ou URL vidéo directe..."
+                    placeholder="Lien YouTube (youtube.com/...), Vimeo (vimeo.com/...) ou vidéo directe..."
                     className="rounded border border-ligne bg-noir p-2 text-xs text-blanc sm:col-span-2 focus:border-nexus focus:outline-none"
                   />
                   <input

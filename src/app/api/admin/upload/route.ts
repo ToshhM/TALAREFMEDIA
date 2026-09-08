@@ -38,12 +38,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Limites de taille : 15 Mo pour les images, 60 Mo pour les vidéos
-    const maxTaille = estImage ? 15 * 1024 * 1024 : 60 * 1024 * 1024;
+    // Limites de taille strictes : 2 Mo pour les images (évite de ralentir le site), 60 Mo pour les vidéos
+    const maxTaille = estImage ? 2 * 1024 * 1024 : 60 * 1024 * 1024;
     if (file.size > maxTaille) {
+      const tailleMo = (file.size / (1024 * 1024)).toFixed(2);
       return NextResponse.json(
         {
-          error: `Fichier trop lourd. Limite : ${estImage ? "15 Mo" : "60 Mo"}.`,
+          error: estImage
+            ? `L'image est trop lourde (${tailleMo} Mo). La limite stricte est de 2 Mo pour garantir la fluidité du site.`
+            : `Fichier vidéo trop lourd (${tailleMo} Mo). Limite : 60 Mo.`,
         },
         { status: 400 },
       );
