@@ -36,7 +36,9 @@ type FormBloc = {
   legende?: string;
   youtubeId?: string;
   duree?: number;
-  images?: Array<{ url: string; alt?: string; credit?: string }>;
+  disposition?: "standard" | "large" | "portrait" | "carre";
+  layout?: "carrousel" | "grille-2" | "grille-3" | "mosaique";
+  images?: Array<{ url: string; alt?: string; credit?: string; legende?: string }>;
 };
 
 async function televerserFichier(file: File): Promise<string> {
@@ -74,27 +76,78 @@ function BlocImageEditor({
   modifierBloc: (index: number, champ: string, valeur: any) => void;
 }) {
   const [enCours, setEnCours] = useState(false);
+  const disposition = bloc.disposition || "standard";
+
+  const optionsDisposition: Array<{
+    id: "standard" | "large" | "portrait" | "carre";
+    label: string;
+    icone: string;
+    desc: string;
+  }> = [
+    { id: "standard", label: "Standard", icone: "🖼️", desc: "16:9 centré" },
+    { id: "large", label: "Pleine largeur", icone: "🌌", desc: "Immersif" },
+    { id: "portrait", label: "Portrait", icone: "📱", desc: "3:4 vertical" },
+    { id: "carre", label: "Carré", icone: "⬛", desc: "1:1 carré" },
+  ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {/* Sélecteur de format / disposition d'image */}
+      <div>
+        <label className="block text-[11px] font-mono uppercase tracking-wider text-gris mb-1.5">
+          Disposition / Format de la photo :
+        </label>
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+          {optionsDisposition.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => modifierBloc(index, "disposition", opt.id)}
+              className={`flex min-h-[42px] items-center justify-center gap-1.5 rounded border px-2.5 py-1.5 text-xs transition-all ${
+                disposition === opt.id
+                  ? "border-accent bg-accent font-bold text-noir shadow-sm"
+                  : "border-ligne bg-surface-2 text-blanc hover:border-blanc/40 hover:bg-ligne"
+              }`}
+            >
+              <span>{opt.icone}</span>
+              <span className="font-semibold">{opt.label}</span>
+              <span className="hidden lg:inline text-[10px] opacity-70">({opt.desc})</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Zone d'aperçu ou d'upload */}
       {bloc.url ? (
-        <div className="relative aspect-video w-full overflow-hidden rounded-md border border-ligne bg-surface-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={bloc.url}
-            alt={bloc.alt || "Aperçu photo"}
-            className="h-full w-full object-cover"
-          />
+        <div className="relative overflow-hidden rounded-md border border-ligne bg-surface-2">
+          <div
+            className={`w-full overflow-hidden ${
+              disposition === "portrait"
+                ? "aspect-[3/4] max-w-[240px] mx-auto"
+                : disposition === "carre"
+                ? "aspect-square max-w-[280px] mx-auto"
+                : disposition === "large"
+                ? "aspect-[21/9]"
+                : "aspect-video"
+            }`}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={bloc.url}
+              alt={bloc.alt || "Aperçu photo"}
+              className="h-full w-full object-cover"
+            />
+          </div>
           <button
             type="button"
             onClick={() => modifierBloc(index, "url", "")}
-            className="absolute top-2 right-2 rounded bg-noir/80 px-2 py-1 text-xs text-encre hover:bg-noir"
+            className="absolute top-2 right-2 rounded-md bg-noir/85 px-2.5 py-1 text-xs font-bold text-encre backdrop-blur hover:bg-noir active:scale-95"
           >
-            ✕ Retirer la photo
+            ✕ Retirer
           </button>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-md border-2 border-dashed border-ligne/70 bg-noir/40 p-6 text-center">
+        <div className="flex flex-col items-center justify-center rounded-md border-2 border-dashed border-ligne/70 bg-noir/40 p-5 sm:p-6 text-center">
           <span className="text-3xl mb-2">📷</span>
           <p className="text-xs font-bold text-blanc">
             Téléverser une photo ou coller un lien direct
@@ -102,7 +155,7 @@ function BlocImageEditor({
           <p className="text-[0.6875rem] text-gris mt-1 mb-3">
             Formats : JPG, PNG, WebP (max 2 Mo) · Ou collez directement une URL ci-dessous
           </p>
-          <label className="cursor-pointer rounded border border-ligne bg-surface-2 px-3 py-1.5 text-xs font-bold text-blanc hover:bg-ligne">
+          <label className="cursor-pointer rounded border border-ligne bg-surface-2 px-3.5 py-2 text-xs font-bold text-blanc hover:bg-ligne active:scale-95 transition-all">
             {enCours ? "Upload en cours..." : "Choisir un fichier image (≤ 2 Mo)"}
             <input
               type="file"
@@ -128,37 +181,39 @@ function BlocImageEditor({
         </div>
       )}
 
+      {/* Champs URL & Crédit */}
       <div className="grid gap-2 sm:grid-cols-3">
         <input
-          type="text"
+          type="url"
           value={bloc.url || ""}
           onChange={(e) => modifierBloc(index, "url", e.target.value)}
-          placeholder="Lien web direct de l'image (ex: https://images.unsplash.com/...)"
-          className="rounded border border-ligne bg-noir p-2 text-xs text-blanc sm:col-span-2 focus:border-nexus focus:outline-none"
+          placeholder="Lien web direct de l'image (https://...)"
+          className="rounded border border-ligne bg-noir p-2.5 sm:p-2 text-xs text-blanc sm:col-span-2 focus:border-nexus focus:outline-none"
         />
         <input
           type="text"
           value={bloc.credit || ""}
           onChange={(e) => modifierBloc(index, "credit", e.target.value)}
           placeholder="Crédit photo (obligatoire)"
-          className="rounded border border-ligne bg-noir p-2 text-xs text-blanc focus:border-nexus focus:outline-none"
+          className="rounded border border-ligne bg-noir p-2.5 sm:p-2 text-xs text-blanc focus:border-nexus focus:outline-none"
         />
       </div>
 
+      {/* Légende & Alt */}
       <div className="grid gap-2 sm:grid-cols-2">
         <input
           type="text"
           value={bloc.legende || ""}
           onChange={(e) => modifierBloc(index, "legende", e.target.value)}
           placeholder="Légende sous la photo (optionnelle)"
-          className="rounded border border-ligne bg-noir p-2 text-xs text-blanc focus:border-nexus focus:outline-none"
+          className="rounded border border-ligne bg-noir p-2.5 sm:p-2 text-xs text-blanc focus:border-nexus focus:outline-none"
         />
         <input
           type="text"
           value={bloc.alt || ""}
           onChange={(e) => modifierBloc(index, "alt", e.target.value)}
-          placeholder="Texte alternatif (description accessibilité)"
-          className="rounded border border-ligne bg-noir p-2 text-xs text-blanc focus:border-nexus focus:outline-none"
+          placeholder="Description pour l'accessibilité (alt)"
+          className="rounded border border-ligne bg-noir p-2.5 sm:p-2 text-xs text-blanc focus:border-nexus focus:outline-none"
         />
       </div>
     </div>
@@ -249,12 +304,25 @@ function BlocGalerieEditor({
   const [enCours, setEnCours] = useState(false);
   const [urlAjout, setUrlAjout] = useState("");
   const images = bloc.images || [];
+  const layout = bloc.layout || "carrousel";
+
+  const optionsLayout: Array<{
+    id: "carrousel" | "grille-2" | "grille-3" | "mosaique";
+    label: string;
+    icone: string;
+    desc: string;
+  }> = [
+    { id: "carrousel", label: "Carrousel", icone: "🎠", desc: "Slider tactile" },
+    { id: "grille-2", label: "Duo (2 cols)", icone: "👥", desc: "Côte à côte" },
+    { id: "grille-3", label: "Grille (3 cols)", icone: "🪟", desc: "Triptyque" },
+    { id: "mosaique", label: "Mosaïque", icone: "🧩", desc: "Grande + petites" },
+  ];
 
   const ajouterImage = (url: string) => {
     if (!url.trim()) return;
     modifierBloc(index, "images", [
       ...images,
-      { url: url.trim(), alt: "", credit: "Talaref Media" },
+      { url: url.trim(), alt: "", credit: "Talaref Media", legende: "" },
     ]);
   };
 
@@ -266,14 +334,42 @@ function BlocGalerieEditor({
     );
   };
 
+  const modifierProprieteImage = (imgIdx: number, champ: string, valeur: string) => {
+    const nouvelles = images.map((img, i) => (i === imgIdx ? { ...img, [champ]: valeur } : img));
+    modifierBloc(index, "images", nouvelles);
+  };
+
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-mono text-xs text-gris">
-          {images.length} photo{images.length > 1 ? "s" : ""} dans la galerie (max 2 Mo par upload ou liens web)
-        </span>
-        <label className="cursor-pointer rounded border border-ligne bg-surface-2 px-3 py-1 text-xs font-bold text-blanc hover:bg-ligne">
-          {enCours ? "Téléversement..." : "+ Uploader photos (≤ 2 Mo)"}
+    <div className="space-y-4">
+      {/* Sélecteur de layout pour la galerie */}
+      <div>
+        <label className="block text-[11px] font-mono uppercase tracking-wider text-gris mb-1.5">
+          Mise en page de la galerie :
+        </label>
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+          {optionsLayout.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => modifierBloc(index, "layout", opt.id)}
+              className={`flex min-h-[42px] items-center justify-center gap-1.5 rounded border px-2.5 py-1.5 text-xs transition-all ${
+                layout === opt.id
+                  ? "border-accent bg-accent font-bold text-noir shadow-sm"
+                  : "border-ligne bg-surface-2 text-blanc hover:border-blanc/40 hover:bg-ligne"
+              }`}
+            >
+              <span>{opt.icone}</span>
+              <span className="font-semibold">{opt.label}</span>
+              <span className="hidden lg:inline text-[10px] opacity-70">({opt.desc})</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Ajout de photos (Upload mobile ou URL) */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <label className="flex min-h-[42px] cursor-pointer items-center justify-center gap-2 rounded border border-ligne bg-surface-2 px-4 py-2 text-xs font-bold text-blanc hover:bg-ligne active:scale-95 transition-all shrink-0">
+          <span>{enCours ? "Téléversement..." : "📁 Uploader photos (≤ 2 Mo)"}</span>
           <input
             type="file"
             accept="image/*"
@@ -297,56 +393,96 @@ function BlocGalerieEditor({
             }}
           />
         </label>
+
+        <div className="flex flex-1 gap-1.5">
+          <input
+            type="url"
+            value={urlAjout}
+            onChange={(e) => setUrlAjout(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (urlAjout.trim()) {
+                  ajouterImage(urlAjout);
+                  setUrlAjout("");
+                }
+              }
+            }}
+            placeholder="Ou coller une URL d'image (https://...)"
+            className="flex-1 min-h-[42px] rounded border border-ligne bg-noir px-3 text-xs text-blanc placeholder-gris/50 focus:border-nexus focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (urlAjout.trim()) {
+                ajouterImage(urlAjout);
+                setUrlAjout("");
+              }
+            }}
+            className="min-h-[42px] rounded border border-ligne bg-surface-2 px-3 text-xs font-bold text-blanc hover:bg-ligne active:scale-95 transition-all shrink-0"
+          >
+            + Ajouter
+          </button>
+        </div>
       </div>
 
-      {/* Ajout d'image par lien URL direct */}
-      <div className="flex gap-2">
-        <input
-          type="url"
-          value={urlAjout}
-          onChange={(e) => setUrlAjout(e.target.value)}
-          placeholder="Ou ajouter une photo par lien URL (ex: https://images.unsplash.com/...)"
-          className="flex-1 rounded border border-ligne bg-noir p-2 text-xs text-blanc placeholder-gris/50 focus:border-nexus focus:outline-none"
-        />
-        <button
-          type="button"
-          onClick={() => {
-            if (urlAjout.trim()) {
-              ajouterImage(urlAjout);
-              setUrlAjout("");
-            }
-          }}
-          className="rounded border border-ligne bg-surface-2 px-3 py-2 text-xs font-bold text-blanc hover:bg-ligne transition-colors"
-        >
-          + Ajouter via URL
-        </button>
-      </div>
-
+      {/* Liste et miniatures des photos dans la galerie */}
       {images.length > 0 ? (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {images.map((img, imgIdx) => (
-            <div
-              key={imgIdx}
-              className="group relative aspect-square overflow-hidden rounded border border-ligne bg-surface-2"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={img.url}
-                alt={img.alt || ""}
-                className="h-full w-full object-cover"
-              />
-              <button
-                type="button"
-                onClick={() => supprimerImage(imgIdx)}
-                className="absolute top-1 right-1 rounded bg-noir/80 px-1.5 py-0.5 text-xs text-encre opacity-80 hover:opacity-100"
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs font-mono text-gris">
+            <span>{images.length} photo{images.length > 1 ? "s" : ""} dans la galerie</span>
+            <span className="text-[11px] text-accent">Mode : {optionsLayout.find((o) => o.id === layout)?.label}</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4">
+            {images.map((img, imgIdx) => (
+              <div
+                key={imgIdx}
+                className="group relative rounded-md border border-ligne bg-surface-2 overflow-hidden flex flex-col"
               >
-                ✕
-              </button>
-            </div>
-          ))}
+                <div className="relative aspect-square w-full overflow-hidden bg-noir/40">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img.url}
+                    alt={img.alt || `Photo ${imgIdx + 1}`}
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => supprimerImage(imgIdx)}
+                    className="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-noir/85 text-xs font-bold text-encre hover:bg-noir active:scale-95 shadow-md"
+                    title="Supprimer cette photo"
+                  >
+                    ✕
+                  </button>
+                  <span className="absolute bottom-1 left-1.5 rounded bg-noir/70 px-1.5 py-0.5 font-mono text-[10px] text-blanc/80">
+                    #{imgIdx + 1}
+                  </span>
+                </div>
+                <div className="p-1.5 space-y-1 bg-surface">
+                  <input
+                    type="text"
+                    value={img.legende || ""}
+                    onChange={(e) => modifierProprieteImage(imgIdx, "legende", e.target.value)}
+                    placeholder="Légende (optionnel)"
+                    className="w-full rounded border border-ligne/60 bg-noir p-1 text-[11px] text-blanc placeholder-gris/40 focus:border-nexus focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    value={img.credit || ""}
+                    onChange={(e) => modifierProprieteImage(imgIdx, "credit", e.target.value)}
+                    placeholder="Crédit photo"
+                    className="w-full rounded border border-ligne/60 bg-noir p-1 text-[10px] text-gris placeholder-gris/40 focus:border-nexus focus:outline-none"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
-        <p className="text-xs text-gris/60 italic">Aucune photo dans la galerie pour l'instant.</p>
+        <p className="text-xs text-gris/60 italic py-2">
+          Aucune photo dans la galerie. Ajoutez-en via le bouton d&apos;upload ou un lien URL.
+        </p>
       )}
     </div>
   );
@@ -509,6 +645,7 @@ export default function AdminPage() {
           alt: b.image?.alt,
           credit: b.image?.credit,
           legende: b.image?.legende,
+          disposition: (b as any).disposition || b.image?.disposition || "standard",
         };
       }
       if (b._type === "moduleVideo") {
@@ -523,6 +660,7 @@ export default function AdminPage() {
         return {
           _type: "galerie",
           images: b.images || [],
+          layout: (b as any).layout || "carrousel",
         };
       }
       return { _type: "paragraphe", texte: "" };
@@ -597,7 +735,7 @@ export default function AdminPage() {
     } else if (type === "image") {
       setBlocs((prev) => [
         ...prev,
-        { _type: "image", url: "", alt: "", credit: "Talaref Media", legende: "" },
+        { _type: "image", url: "", alt: "", credit: "Talaref Media", legende: "", disposition: "standard" },
       ]);
     } else if (type === "moduleVideo") {
       setBlocs((prev) => [
@@ -607,7 +745,7 @@ export default function AdminPage() {
     } else if (type === "galerie") {
       setBlocs((prev) => [
         ...prev,
-        { _type: "galerie", images: [] },
+        { _type: "galerie", images: [], layout: "carrousel" },
       ]);
     }
   };
@@ -700,11 +838,13 @@ export default function AdminPage() {
               return {
                 _key,
                 _type: "image",
+                disposition: b.disposition || "standard",
                 image: {
                   url: b.url || "",
                   alt: b.alt || titre || "Photo de l'article",
                   credit: b.credit || "Talaref Media",
                   legende: b.legende || undefined,
+                  disposition: b.disposition || "standard",
                 },
               };
             }
@@ -725,10 +865,12 @@ export default function AdminPage() {
               return {
                 _key,
                 _type: "galerie",
+                layout: b.layout || "carrousel",
                 images: (b.images || []).map((img) => ({
                   url: img.url,
                   alt: img.alt || titre || "Photo de galerie",
                   credit: img.credit || "Talaref Media",
+                  legende: img.legende || undefined,
                 })),
               };
             }
@@ -1297,60 +1439,60 @@ export default function AdminPage() {
                   <span className="font-mono text-xs font-bold uppercase tracking-wider text-blanc">
                     Corps de l'article ({blocs.length} bloc{blocs.length > 1 ? "s" : ""})
                   </span>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
                     <button
                       type="button"
                       onClick={() => ajouterBloc("paragraphe")}
-                      className="rounded bg-surface-2 px-2.5 py-1 text-xs text-blanc hover:bg-ligne"
+                      className="min-h-[38px] rounded border border-ligne bg-surface-2 px-3 py-1.5 text-xs font-medium text-blanc hover:bg-ligne active:scale-95 transition-all"
                     >
                       + Paragraphe
                     </button>
                     <button
                       type="button"
                       onClick={() => ajouterBloc("intertitre")}
-                      className="rounded bg-surface-2 px-2.5 py-1 text-xs text-blanc hover:bg-ligne"
+                      className="min-h-[38px] rounded border border-ligne bg-surface-2 px-3 py-1.5 text-xs font-medium text-blanc hover:bg-ligne active:scale-95 transition-all"
                     >
                       + Intertitre
                     </button>
                     <button
                       type="button"
                       onClick={() => ajouterBloc("image")}
-                      className="rounded border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-400 hover:bg-emerald-500 hover:text-noir"
+                      className="min-h-[38px] rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500 hover:text-noir active:scale-95 transition-all"
                     >
                       📷 + Photo
                     </button>
                     <button
                       type="button"
                       onClick={() => ajouterBloc("moduleVideo")}
-                      className="rounded border border-red-500/40 bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-400 hover:bg-red-500 hover:text-noir"
+                      className="min-h-[38px] rounded border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500 hover:text-noir active:scale-95 transition-all"
                     >
                       🎬 + Vidéo
                     </button>
                     <button
                       type="button"
                       onClick={() => ajouterBloc("galerie")}
-                      className="rounded bg-surface-2 px-2.5 py-1 text-xs text-blanc hover:bg-ligne"
+                      className="min-h-[38px] rounded border border-ligne bg-surface-2 px-3 py-1.5 text-xs font-medium text-blanc hover:bg-ligne active:scale-95 transition-all"
                     >
                       🖼 + Galerie
                     </button>
                     <button
                       type="button"
                       onClick={() => ajouterBloc("laRef")}
-                      className="rounded border border-pop/40 bg-pop/10 px-2.5 py-1 text-xs font-bold text-pop hover:bg-pop hover:text-noir"
+                      className="min-h-[38px] rounded border border-pop/40 bg-pop/10 px-3 py-1.5 text-xs font-bold text-pop hover:bg-pop hover:text-noir active:scale-95 transition-all"
                     >
                       + La Ref ★
                     </button>
                     <button
                       type="button"
                       onClick={() => ajouterBloc("citation")}
-                      className="rounded bg-surface-2 px-2.5 py-1 text-xs text-blanc hover:bg-ligne"
+                      className="min-h-[38px] rounded border border-ligne bg-surface-2 px-3 py-1.5 text-xs font-medium text-blanc hover:bg-ligne active:scale-95 transition-all"
                     >
                       + Citation
                     </button>
                     <button
                       type="button"
                       onClick={() => ajouterBloc("chiffreCle")}
-                      className="rounded bg-surface-2 px-2.5 py-1 text-xs text-blanc hover:bg-ligne"
+                      className="min-h-[38px] rounded border border-ligne bg-surface-2 px-3 py-1.5 text-xs font-medium text-blanc hover:bg-ligne active:scale-95 transition-all"
                     >
                       + Chiffre clé
                     </button>
@@ -1536,6 +1678,71 @@ export default function AdminPage() {
                     )}
                   </div>
                 ))}
+
+                {/* Boutons d'ajout de bloc en bas de liste (idéal sur mobile) */}
+                <div className="flex flex-col gap-2 rounded-lg border border-dashed border-ligne/70 bg-surface/20 p-4 text-center">
+                  <span className="font-mono text-xs text-gris">
+                    + Ajouter un nouveau bloc à la fin de l&apos;article :
+                  </span>
+                  <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
+                    <button
+                      type="button"
+                      onClick={() => ajouterBloc("paragraphe")}
+                      className="min-h-[38px] rounded border border-ligne bg-surface-2 px-3 py-1.5 text-xs font-medium text-blanc hover:bg-ligne active:scale-95 transition-all"
+                    >
+                      + Paragraphe
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => ajouterBloc("intertitre")}
+                      className="min-h-[38px] rounded border border-ligne bg-surface-2 px-3 py-1.5 text-xs font-medium text-blanc hover:bg-ligne active:scale-95 transition-all"
+                    >
+                      + Intertitre
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => ajouterBloc("image")}
+                      className="min-h-[38px] rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500 hover:text-noir active:scale-95 transition-all"
+                    >
+                      📷 + Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => ajouterBloc("moduleVideo")}
+                      className="min-h-[38px] rounded border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500 hover:text-noir active:scale-95 transition-all"
+                    >
+                      🎬 + Vidéo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => ajouterBloc("galerie")}
+                      className="min-h-[38px] rounded border border-ligne bg-surface-2 px-3 py-1.5 text-xs font-medium text-blanc hover:bg-ligne active:scale-95 transition-all"
+                    >
+                      🖼 + Galerie
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => ajouterBloc("laRef")}
+                      className="min-h-[38px] rounded border border-pop/40 bg-pop/10 px-3 py-1.5 text-xs font-bold text-pop hover:bg-pop hover:text-noir active:scale-95 transition-all"
+                    >
+                      + La Ref ★
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => ajouterBloc("citation")}
+                      className="min-h-[38px] rounded border border-ligne bg-surface-2 px-3 py-1.5 text-xs font-medium text-blanc hover:bg-ligne active:scale-95 transition-all"
+                    >
+                      + Citation
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => ajouterBloc("chiffreCle")}
+                      className="min-h-[38px] rounded border border-ligne bg-surface-2 px-3 py-1.5 text-xs font-medium text-blanc hover:bg-ligne active:scale-95 transition-all"
+                    >
+                      + Chiffre clé
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* SECTION RÉFÉRENCEMENT GOOGLE & APERÇU SERP (SEO) */}

@@ -4,6 +4,7 @@ import { getUnivers } from "@/lib/univers";
 import { FacadeVideo } from "./facade-video";
 import { PastilleCode } from "./pastille-code";
 import { TexteRiche } from "./texte-riche";
+import { CarrouselImages } from "./carrousel-images";
 
 /**
  * Le rendu du jeu de blocs FERMÉ — architecture V1 §03.
@@ -96,11 +97,31 @@ function RenduBloc({
         </aside>
       );
 
-    case "image":
+    case "image": {
+      const disposition = bloc.disposition || bloc.image.disposition || "standard";
+
+      let figureClass = "my-10";
+      let containerClass = "relative w-full overflow-hidden rounded-md bg-surface-2 border border-ligne";
+      let aspectClass = "aspect-video";
+
+      if (disposition === "large") {
+        figureClass = "my-12 -mx-4 sm:-mx-8 md:-mx-16 lg:-mx-20";
+        containerClass = "relative w-full overflow-hidden rounded-none sm:rounded-lg bg-surface-2 border-y sm:border border-ligne";
+        aspectClass = "aspect-[16/9] sm:aspect-[21/9]";
+      } else if (disposition === "portrait") {
+        figureClass = "my-10 flex flex-col items-center";
+        containerClass = "relative w-full max-w-sm sm:max-w-md overflow-hidden rounded-md bg-surface-2 border border-ligne";
+        aspectClass = "aspect-[3/4]";
+      } else if (disposition === "carre") {
+        figureClass = "my-10 flex flex-col items-center";
+        containerClass = "relative w-full max-w-sm sm:max-w-lg overflow-hidden rounded-md bg-surface-2 border border-ligne";
+        aspectClass = "aspect-square";
+      }
+
       return (
-        <figure className="my-10">
+        <figure className={figureClass}>
           <div
-            className="relative aspect-video w-full overflow-hidden rounded-md bg-surface-2 border border-ligne"
+            className={`${containerClass} ${aspectClass}`}
             role="img"
             aria-label={bloc.image.alt}
           >
@@ -116,21 +137,130 @@ function RenduBloc({
               <div className="texture" aria-hidden="true" />
             )}
           </div>
-          <figcaption className="etiquette mt-2">
-            {bloc.image.legende ? `${bloc.image.legende} · ` : ""}
-            {bloc.image.credit}
-          </figcaption>
+          {(bloc.image.legende || bloc.image.credit) && (
+            <figcaption className="etiquette mt-2">
+              {bloc.image.legende ? `${bloc.image.legende} · ` : ""}
+              {bloc.image.credit}
+            </figcaption>
+          )}
         </figure>
       );
+    }
 
-    case "galerie":
+    case "galerie": {
+      const layout = bloc.layout || "carrousel";
+
+      if (layout === "carrousel") {
+        return <CarrouselImages images={bloc.images} />;
+      }
+
+      if (layout === "grille-2") {
+        return (
+          <figure className="my-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              {bloc.images.map((image, i) => (
+                <div
+                  key={i}
+                  className="group relative aspect-[4/3] overflow-hidden rounded-md bg-surface-2 border border-ligne"
+                  role="img"
+                  aria-label={image.alt}
+                >
+                  {image.url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={image.url}
+                      alt={image.alt || ""}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="texture" aria-hidden="true" />
+                  )}
+                  {image.legende && (
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-noir/90 via-noir/50 to-transparent p-2.5 pt-6 text-[11px] text-blanc">
+                      {image.legende}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <figcaption className="etiquette mt-2">
+              {bloc.images.length} photos · {[...new Set(bloc.images.map((i) => i.credit).filter(Boolean))].join(", ") || "Talaref Media"}
+            </figcaption>
+          </figure>
+        );
+      }
+
+      if (layout === "mosaique" && bloc.images.length >= 3) {
+        const [principale, ...secondaires] = bloc.images;
+        return (
+          <figure className="my-10">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+              <div
+                className="group relative sm:col-span-2 aspect-[4/3] sm:aspect-auto overflow-hidden rounded-md bg-surface-2 border border-ligne"
+                role="img"
+                aria-label={principale.alt}
+              >
+                {principale.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={principale.url}
+                    alt={principale.alt || ""}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="texture" aria-hidden="true" />
+                )}
+                {principale.legende && (
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-noir/90 via-noir/50 to-transparent p-2.5 pt-6 text-xs text-blanc">
+                    {principale.legende}
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-1 gap-2.5 sm:gap-3">
+                {secondaires.slice(0, 2).map((image, i) => (
+                  <div
+                    key={i}
+                    className="group relative aspect-square sm:aspect-video overflow-hidden rounded-md bg-surface-2 border border-ligne"
+                    role="img"
+                    aria-label={image.alt}
+                  >
+                    {image.url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={image.url}
+                        alt={image.alt || ""}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="texture" aria-hidden="true" />
+                    )}
+                    {image.legende && (
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-noir/90 via-noir/50 to-transparent p-2 text-[10px] text-blanc">
+                        {image.legende}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <figcaption className="etiquette mt-2">
+              {bloc.images.length} photos · {[...new Set(bloc.images.map((i) => i.credit).filter(Boolean))].join(", ") || "Talaref Media"}
+            </figcaption>
+          </figure>
+        );
+      }
+
+      // Grille 3 colonnes (2 sur mobile)
       return (
         <figure className="my-10">
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
             {bloc.images.map((image, i) => (
               <div
                 key={i}
-                className="relative aspect-square overflow-hidden rounded-md bg-surface-2 border border-ligne"
+                className="group relative aspect-square overflow-hidden rounded-md bg-surface-2 border border-ligne"
                 role="img"
                 aria-label={image.alt}
               >
@@ -139,11 +269,16 @@ function RenduBloc({
                   <img
                     src={image.url}
                     alt={image.alt || ""}
-                    className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     loading="lazy"
                   />
                 ) : (
                   <div className="texture" aria-hidden="true" />
+                )}
+                {image.legende && (
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-noir/90 via-noir/50 to-transparent p-2 text-[10px] text-blanc">
+                    {image.legende}
+                  </div>
                 )}
               </div>
             ))}
@@ -154,6 +289,7 @@ function RenduBloc({
           </figcaption>
         </figure>
       );
+    }
 
     case "chiffreCle":
       return (

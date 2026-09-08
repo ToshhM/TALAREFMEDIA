@@ -32,6 +32,7 @@ export type Image = {
   legende?: string;
   largeur?: number;
   hauteur?: number;
+  disposition?: "standard" | "large" | "portrait" | "carre";
 };
 
 export type Bloc =
@@ -40,8 +41,8 @@ export type Bloc =
   | { _key: string; _type: "intertitre"; niveau: 2 | 3; texte: string }
   | { _key: string; _type: "moduleVideo"; video: Video }
   | { _key: string; _type: "laRef"; titre: string; texte: string }
-  | { _key: string; _type: "image"; image: Image }
-  | { _key: string; _type: "galerie"; images: Image[] }
+  | { _key: string; _type: "image"; image: Image; disposition?: "standard" | "large" | "portrait" | "carre" }
+  | { _key: string; _type: "galerie"; images: Image[]; layout?: "carrousel" | "grille-2" | "grille-3" | "mosaique" }
   | {
       _key: string;
       _type: "chiffreCle";
