@@ -31,7 +31,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+  const gaId = process.env.NEXT_PUBLIC_GA_ID || "G-Y1VPN3J1H6";
 
   return (
     <html lang="fr" className={variablesPolices} suppressHydrationWarning>
