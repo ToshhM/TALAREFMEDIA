@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UNIVERS, COLLECTIONS } from "@/lib/univers";
 import { UserMenu } from "./user-menu";
+import { ThemeToggle } from "./theme-toggle";
 
 export function MobileNavigation() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -142,9 +143,33 @@ export function MobileNavigation() {
           </Link>
 
           {/* Profil / Compte */}
-          <div className="flex flex-col items-center justify-center">
-            <UserMenu />
-          </div>
+          <Link
+            href="/compte"
+            className={`flex flex-col items-center justify-center gap-1 rounded-md px-3 py-1.5 transition-colors ${
+              pathname === "/compte" || pathname === "/connexion"
+                ? "text-blanc font-bold"
+                : "text-gris hover:text-blanc"
+            }`}
+          >
+            <svg
+              width={20}
+              height={20}
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+            <span className="text-[11px] font-medium tracking-wide">
+              Compte
+            </span>
+          </Link>
         </div>
       </aside>
 
@@ -164,26 +189,29 @@ export function MobileNavigation() {
                 Tous les univers
               </h2>
             </div>
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(false)}
-              className="rounded-full border border-ligne p-2 text-gris hover:text-blanc hover:border-blanc"
-              aria-label="Fermer le menu"
-            >
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                className="rounded-full border border-ligne p-2 text-gris hover:text-blanc hover:border-blanc"
+                aria-label="Fermer le menu"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Grille des 6 Univers */}

@@ -76,6 +76,55 @@
   --teinte: color-mix(in srgb, var(--accent) 13%, var(--noir));
 }
 
+/* ============================================================
+   MODE JOUR (PAPIER / ENCRE) — Activé via [data-theme="light"]
+   ============================================================ */
+[data-theme="light"] {
+  --noir: #f8f8fa;
+  --surface: #ffffff;
+  --surface-2: #efeff4;
+  --ligne: #e2e2ea;
+  --gris: #5a5a68;
+  --gris-clair: #3e3e4a;
+  --blanc: #0b0b0c;
+
+  /* Accents adaptés au fond clair pour un contraste optimal */
+  --pop: #c98a00;
+  --arena: #3d8800;
+  --nexus: #059669;
+  --objectif: #0284c7;
+  --agora: #2563eb;
+  --bpm: #8b28cf;
+  --arcade: #db2777;
+  --encre: #dc2626;
+
+  --accent: var(--pop);
+  --teinte: color-mix(in srgb, var(--accent) 12%, #ffffff);
+}
+
+[data-theme="light"] [data-u="pop"] { --accent: var(--pop); }
+[data-theme="light"] [data-u="arena"] { --accent: var(--arena); }
+[data-theme="light"] [data-u="nexus"] { --accent: var(--nexus); }
+[data-theme="light"] [data-u="objectif"] { --accent: var(--objectif); }
+[data-theme="light"] [data-u="agora"] { --accent: var(--agora); }
+[data-theme="light"] [data-u="bpm"] { --accent: var(--bpm); }
+[data-theme="light"] [data-u="encre"] { --accent: var(--encre); }
+[data-theme="light"] [data-u="arcade"] { --accent: var(--arcade); }
+[data-theme="light"] [data-u] {
+  --teinte: color-mix(in srgb, var(--accent) 12%, #ffffff);
+}
+
+/* Inversion de l'emblème : blanc sur noir en dark mode, noir pur en light mode */
+.logo-embleme-img {
+  filter: invert(1) brightness(1.25);
+  transition: filter 0.2s ease;
+}
+
+[data-theme="light"] .logo-embleme-img {
+  filter: none;
+}
+
+
 /* Expose les tokens à Tailwind v4 : bg-noir, text-accent, border-ligne… */
 @theme inline {
   --color-noir: var(--noir);

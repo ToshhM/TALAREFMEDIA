@@ -34,7 +34,20 @@ export default function RootLayout({
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
   return (
-    <html lang="fr" className={variablesPolices}>
+    <html lang="fr" className={variablesPolices} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                if (localStorage.getItem('talaref_theme') === 'light') {
+                  document.documentElement.setAttribute('data-theme', 'light');
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
       <body className="flex min-h-screen flex-col pb-16 md:pb-0">
         {gaId ? (
           <>
