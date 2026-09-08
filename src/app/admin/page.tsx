@@ -615,6 +615,28 @@ export default function AdminPage() {
     setBlocs((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const deplacerBlocVersLeHaut = (index: number) => {
+    if (index <= 0) return;
+    setBlocs((prev) => {
+      const nouveau = [...prev];
+      const temp = nouveau[index - 1];
+      nouveau[index - 1] = nouveau[index];
+      nouveau[index] = temp;
+      return nouveau;
+    });
+  };
+
+  const deplacerBlocVersLeBas = (index: number) => {
+    setBlocs((prev) => {
+      if (index >= prev.length - 1) return prev;
+      const nouveau = [...prev];
+      const temp = nouveau[index + 1];
+      nouveau[index + 1] = nouveau[index];
+      nouveau[index] = temp;
+      return nouveau;
+    });
+  };
+
   const modifierBloc = (index: number, champ: string, valeur: any) => {
     setBlocs((prev) =>
       prev.map((b, i) => (i === index ? { ...b, [champ]: valeur } : b)),
@@ -1335,14 +1357,53 @@ export default function AdminPage() {
                     key={index}
                     className="group relative rounded-md border border-ligne/60 bg-noir/50 p-4 transition-colors hover:border-ligne"
                   >
-                    <div className="mb-2 flex items-center justify-between text-xs text-gris">
-                      <span className="font-mono font-bold uppercase text-gris">
-                        Bloc {index + 1} · {bloc._type}
-                      </span>
+                    <div className="mb-3 flex items-center justify-between border-b border-ligne/40 pb-2 text-xs text-gris">
+                      <div className="flex items-center gap-2">
+                        {/* Boutons pour translater / monter / descendre les blocs */}
+                        <div className="flex items-center rounded border border-ligne bg-surface p-0.5 shadow-sm">
+                          <button
+                            type="button"
+                            onClick={() => deplacerBlocVersLeHaut(index)}
+                            disabled={index === 0}
+                            className={`flex h-6 w-6 items-center justify-center rounded text-xs transition-all ${
+                              index === 0
+                                ? "cursor-not-allowed text-gris/25"
+                                : "text-gris hover:bg-surface-2 hover:text-blanc active:scale-95"
+                            }`}
+                            title="Monter ce bloc vers le haut (▲)"
+                            aria-label="Monter le bloc"
+                          >
+                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deplacerBlocVersLeBas(index)}
+                            disabled={index === blocs.length - 1}
+                            className={`flex h-6 w-6 items-center justify-center rounded text-xs transition-all ${
+                              index === blocs.length - 1
+                                ? "cursor-not-allowed text-gris/25"
+                                : "text-gris hover:bg-surface-2 hover:text-blanc active:scale-95"
+                            }`}
+                            title="Descendre ce bloc vers le bas (▼)"
+                            aria-label="Descendre le bloc"
+                          >
+                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        <span className="font-mono font-bold uppercase text-gris-clair">
+                          Bloc {index + 1} <span className="text-gris">· {bloc._type}</span>
+                        </span>
+                      </div>
+
                       <button
                         type="button"
                         onClick={() => supprimerBloc(index)}
-                        className="text-gris opacity-40 transition-opacity hover:text-encre hover:opacity-100"
+                        className="rounded p-1 text-gris transition-colors hover:bg-encre/10 hover:text-encre"
                         title="Supprimer ce bloc"
                       >
                         ✕
