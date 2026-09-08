@@ -6,6 +6,7 @@ import { variablesPolices } from "@/lib/fonts";
 import { SITE } from "@/lib/site";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { MobileNavigation } from "@/components/mobile-navigation";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -34,7 +35,7 @@ export default function RootLayout({
 
   return (
     <html lang="fr" className={variablesPolices}>
-      <body className="flex min-h-screen flex-col">
+      <body className="flex min-h-screen flex-col pb-16 md:pb-0">
         {gaId ? (
           <>
             <Script
@@ -64,6 +65,7 @@ export default function RootLayout({
           {children}
         </div>
         <SiteFooter />
+        <MobileNavigation />
       </body>
     </html>
   );

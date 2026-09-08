@@ -10,13 +10,15 @@ import { UserMenu } from "./user-menu";
  */
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-ligne bg-noir/95 backdrop-blur supports-[backdrop-filter]:bg-noir/80">
-      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
+    <header className="sticky top-0 z-40 border-b border-ligne bg-noir/95 backdrop-blur supports-[backdrop-filter]:bg-noir/80">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+        {/* Logo de marque (Mis en avant en haut sur mobile et desktop) */}
         <LogoTalaref />
 
+        {/* Navigation Desktop des 6 Univers (Cachée sur mobile, accessible via le menu burger du bas) */}
         <nav
           aria-label="Les six univers"
-          className="-mx-1 flex flex-1 items-center gap-1 overflow-x-auto"
+          className="hidden md:flex flex-1 items-center justify-center gap-1 -mx-1"
         >
           {UNIVERS.map((u) => (
             <Link
@@ -30,6 +32,7 @@ export function SiteHeader() {
           ))}
         </nav>
 
+        {/* Actions secondaires */}
         <div className="flex shrink-0 items-center gap-2">
           <Link
             href="/videos"
@@ -40,7 +43,7 @@ export function SiteHeader() {
           <Link
             href="/recherche"
             aria-label="Rechercher sur Talaref"
-            className="flex items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-sm text-gris transition-colors hover:text-blanc"
+            className="hidden md:flex items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-sm text-gris transition-colors hover:text-blanc"
           >
             <svg
               className="h-4 w-4 shrink-0"
@@ -56,9 +59,11 @@ export function SiteHeader() {
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
             </svg>
-            <span className="hidden sm:inline">Rechercher</span>
+            <span>Rechercher</span>
           </Link>
-          <UserMenu />
+          <div className="hidden md:block">
+            <UserMenu />
+          </div>
         </div>
       </div>
     </header>
