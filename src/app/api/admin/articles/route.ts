@@ -33,6 +33,7 @@ export async function POST(request: Request) {
       video,
       auteurNom,
       auteurSlug,
+      publieLe,
     } = body;
 
     if (!titre?.trim() || !chapo?.trim() || !univers) {
@@ -126,7 +127,7 @@ export async function POST(request: Request) {
       video: video?.youtubeId || video?.url ? video : undefined,
       corps: blocsArticle,
       status: "published",
-      publieLe: new Date().toISOString(),
+      publieLe: publieLe ? new Date(publieLe).toISOString() : new Date().toISOString(),
       tempsDeLecture,
     };
 
@@ -208,6 +209,7 @@ export async function PUT(request: Request) {
       metaTitre,
       metaDescription,
       refNumber,
+      publieLe,
     } = body;
 
     if (!slug || !titre?.trim() || !chapo?.trim() || !univers) {
@@ -276,7 +278,9 @@ export async function PUT(request: Request) {
       video: video?.youtubeId || video?.url ? video : undefined,
       corps: blocsArticle,
       status: existant?.status || "published",
-      publieLe: existant?.publieLe || new Date().toISOString(),
+      publieLe: publieLe
+        ? new Date(publieLe).toISOString()
+        : existant?.publieLe || new Date().toISOString(),
       misAJourLe: new Date().toISOString(),
       tempsDeLecture,
     };
@@ -297,6 +301,7 @@ export async function PUT(request: Request) {
             tags: articleMaj.tags,
             video: articleMaj.video || null,
             corps: articleMaj.corps,
+            publie_le: articleMaj.publieLe,
             mis_a_jour_le: articleMaj.misAJourLe,
             temps_de_lecture: articleMaj.tempsDeLecture,
           })

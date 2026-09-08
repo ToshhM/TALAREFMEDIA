@@ -515,6 +515,7 @@ export default function AdminPage() {
   const [videoPrincipaleUrl, setVideoPrincipaleUrl] = useState("");
   const [videoPrincipaleTitre, setVideoPrincipaleTitre] = useState("");
   const [tagsRaw, setTagsRaw] = useState("");
+  const [datePublication, setDatePublication] = useState("");
   const [universSecondaires, setUniversSecondaires] = useState<UniverseSlug[]>([]);
   const [metaTitre, setMetaTitre] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
@@ -629,6 +630,11 @@ export default function AdminPage() {
     setMetaTitre(art.metaTitre || "");
     setMetaDescription(art.metaDescription || "");
     setAfficherSeoAvance(Boolean(art.metaTitre || art.metaDescription));
+    setDatePublication(
+      art.publieLe
+        ? new Date(art.publieLe).toISOString().slice(0, 16)
+        : ""
+    );
 
     const formBlocs: FormBloc[] = (art.corps || []).map((b) => {
       if (b._type === "paragraphe") return { _type: "paragraphe", texte: b.texte };
@@ -681,6 +687,7 @@ export default function AdminPage() {
     setVideoPrincipaleUrl("");
     setVideoPrincipaleTitre("");
     setTagsRaw("");
+    setDatePublication("");
     setUniversSecondaires([]);
     setMetaTitre("");
     setMetaDescription("");
@@ -901,6 +908,7 @@ export default function AdminPage() {
           imageCredit,
           imageAlt,
           tagsRaw,
+          publieLe: datePublication ? new Date(datePublication).toISOString() : undefined,
           metaTitre: metaTitre.trim() || undefined,
           metaDescription: metaDescription.trim() || undefined,
           corps: corpsBlocs,
@@ -936,6 +944,7 @@ export default function AdminPage() {
           setVideoPrincipaleUrl("");
           setVideoPrincipaleTitre("");
           setTagsRaw("");
+          setDatePublication("");
           setUniversSecondaires([]);
           setMetaTitre("");
           setMetaDescription("");
@@ -1160,7 +1169,7 @@ export default function AdminPage() {
 
           <form onSubmit={handlePublierArticle} className="space-y-8">
             {/* Barre de métadonnées légères */}
-            <div className="grid gap-4 rounded-lg border border-ligne bg-surface p-5 sm:grid-cols-3">
+            <div className="grid gap-4 rounded-lg border border-ligne bg-surface p-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-gris">
                   Univers propriétaire
@@ -1182,7 +1191,7 @@ export default function AdminPage() {
                 </select>
               </div>
 
-              {collectionsDisponibles.length > 0 && (
+              {collectionsDisponibles.length > 0 ? (
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-gris">
                     Collection (optionnel)
@@ -1200,11 +1209,11 @@ export default function AdminPage() {
                     ))}
                   </select>
                 </div>
-              )}
+              ) : null}
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-gris">
-                  Tags libres (séparés par des virgules)
+                  Tags libres (séparés par virgules)
                 </label>
                 <input
                   type="text"
@@ -1215,8 +1224,38 @@ export default function AdminPage() {
                 />
               </div>
 
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gris">
+                    Date de publication
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      const annee = now.getFullYear();
+                      const mois = String(now.getMonth() + 1).padStart(2, "0");
+                      const jour = String(now.getDate()).padStart(2, "0");
+                      const heures = String(now.getHours()).padStart(2, "0");
+                      const minutes = String(now.getMinutes()).padStart(2, "0");
+                      setDatePublication(`${annee}-${mois}-${jour}T${heures}:${minutes}`);
+                    }}
+                    className="text-[10px] font-mono text-accent hover:underline"
+                    title="Régler sur l'heure actuelle"
+                  >
+                    Maintenant ⚡
+                  </button>
+                </div>
+                <input
+                  type="datetime-local"
+                  value={datePublication}
+                  onChange={(e) => setDatePublication(e.target.value)}
+                  className="mt-1.5 w-full rounded border border-ligne bg-noir p-2 text-xs font-mono text-blanc focus:border-nexus focus:outline-none"
+                />
+              </div>
+
               {/* Univers / Rubriques secondaires pour multi-diffusion */}
-              <div className="sm:col-span-3 border-t border-ligne/70 pt-3">
+              <div className="col-span-full border-t border-ligne/70 pt-3">
                 <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-blanc">
                     Univers / Rubriques secondaires (croisements thématiques)
