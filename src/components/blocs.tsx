@@ -3,6 +3,7 @@ import type { Article, Bloc } from "@/lib/types";
 import { getUnivers } from "@/lib/univers";
 import { FacadeVideo } from "./facade-video";
 import { PastilleCode } from "./pastille-code";
+import { TexteRiche } from "./texte-riche";
 
 /**
  * Le rendu du jeu de blocs FERMÉ — architecture V1 §03.
@@ -41,11 +42,14 @@ function RenduBloc({
   switch (bloc._type) {
     case "chapo":
       return (
-        <p className="mb-8 text-xl leading-relaxed text-gris">{bloc.texte}</p>
+        <TexteRiche
+          texte={bloc.texte}
+          className="mb-8 text-xl leading-relaxed text-gris"
+        />
       );
 
     case "paragraphe":
-      return <p className="mb-6">{bloc.texte}</p>;
+      return <TexteRiche texte={bloc.texte} className="mb-6" />;
 
     case "intertitre": {
       // Niveaux 2 et 3 uniquement : la hiérarchie d'un article ne descend
@@ -85,9 +89,10 @@ function RenduBloc({
         <aside className="my-10 border-l-2 border-accent bg-teinte p-5">
           <p className="etiquette text-accent">La ref</p>
           <p className="mt-2 font-semibold text-blanc">{bloc.titre}</p>
-          <p className="mt-2 text-[0.95rem] leading-relaxed text-gris">
-            {bloc.texte}
-          </p>
+          <TexteRiche
+            texte={bloc.texte}
+            className="mt-2 text-[0.95rem] leading-relaxed text-gris"
+          />
         </aside>
       );
 
@@ -167,7 +172,7 @@ function RenduBloc({
       return (
         <figure className="my-10">
           <blockquote className="border-l-2 border-ligne pl-5 text-xl italic leading-relaxed text-blanc">
-            « {bloc.texte} »
+            « <TexteRiche texte={bloc.texte} inline /> »
           </blockquote>
           <figcaption className="etiquette mt-3 pl-5">
             {bloc.auteur}

@@ -11,6 +11,7 @@ import type { User } from "@supabase/supabase-js";
 import { parserSourceVideo } from "@/lib/video-utils";
 import { FacadeVideo } from "@/components/facade-video";
 import { slugifier } from "@/lib/reserved";
+import { EditeurTexteRiche } from "@/components/editeur-texte-riche";
 
 type FormBloc = {
   _type:
@@ -1142,14 +1143,18 @@ export default function AdminPage() {
 
               {/* Chapô */}
               <div className="mb-8">
-                <textarea
-                  required
-                  rows={2}
-                  value={chapo}
-                  onChange={(e) => setChapo(e.target.value)}
-                  placeholder="Écrivez un chapô accrocheur (résumé de l'article, méta-description)..."
-                  className="w-full resize-none border-l-2 border-ligne bg-transparent pl-4 text-lg leading-relaxed text-gris-clair placeholder:text-gris/40 focus:border-nexus focus:outline-none"
-                />
+                <label className="mb-2 block font-mono text-xs uppercase tracking-wider text-gris">
+                  Chapô de l&apos;article (Introduction / Résumé)
+                </label>
+                <div className="rounded border-l-2 border-nexus bg-surface/30 p-3">
+                  <EditeurTexteRiche
+                    valeur={chapo}
+                    onChange={setChapo}
+                    rows={3}
+                    placeholder="Écrivez un chapô accrocheur (résumé de l'article, méta-description)..."
+                    className="text-base text-gris-clair"
+                  />
+                </div>
                 <span className="mt-1 block font-mono text-[0.625rem] text-gris">
                   {chapo.length} signes (recommandé : 200 à 320)
                 </span>
@@ -1412,12 +1417,11 @@ export default function AdminPage() {
 
                     {/* Bloc Paragraphe */}
                     {bloc._type === "paragraphe" && (
-                      <textarea
-                        rows={3}
-                        value={bloc.texte || ""}
-                        onChange={(e) => modifierBloc(index, "texte", e.target.value)}
+                      <EditeurTexteRiche
+                        rows={4}
+                        valeur={bloc.texte || ""}
+                        onChange={(val) => modifierBloc(index, "texte", val)}
                         placeholder="Rédigez votre paragraphe ici..."
-                        className="w-full resize-y bg-transparent text-sm leading-relaxed text-blanc placeholder:text-gris/40 focus:outline-none"
                       />
                     )}
 
@@ -1472,25 +1476,27 @@ export default function AdminPage() {
                           placeholder="Titre de la référence (ex: L'effet Koulechov, Le Buster Call)..."
                           className="mt-1 w-full bg-transparent font-bold text-blanc placeholder:text-gris/40 focus:outline-none"
                         />
-                        <textarea
-                          rows={2}
-                          value={bloc.texte || ""}
-                          onChange={(e) => modifierBloc(index, "texte", e.target.value)}
-                          placeholder="Expliquez la référence, l'easter egg, le sample ou le fait historique..."
-                          className="mt-2 w-full resize-none bg-transparent text-xs leading-relaxed text-gris-clair placeholder:text-gris/40 focus:outline-none"
-                        />
+                        <div className="mt-3 pt-2 border-t border-ligne/30">
+                          <EditeurTexteRiche
+                            rows={3}
+                            valeur={bloc.texte || ""}
+                            onChange={(val) => modifierBloc(index, "texte", val)}
+                            placeholder="Expliquez la référence, l'easter egg, le sample ou le fait historique..."
+                            className="text-xs text-gris-clair"
+                          />
+                        </div>
                       </div>
                     )}
 
                     {/* Bloc Citation */}
                     {bloc._type === "citation" && (
-                      <div className="border-l-2 border-blanc pl-4">
-                        <textarea
+                      <div className="border-l-2 border-blanc pl-4 space-y-2">
+                        <EditeurTexteRiche
                           rows={2}
-                          value={bloc.texte || ""}
-                          onChange={(e) => modifierBloc(index, "texte", e.target.value)}
+                          valeur={bloc.texte || ""}
+                          onChange={(val) => modifierBloc(index, "texte", val)}
                           placeholder="« Citation inspirante ou marquante... »"
-                          className="w-full resize-none bg-transparent italic text-blanc focus:outline-none"
+                          className="italic text-blanc"
                         />
                         <input
                           type="text"

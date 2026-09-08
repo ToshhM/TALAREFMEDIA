@@ -10,6 +10,7 @@ import { BarreProgression } from "@/components/barre-progression";
 import { PastilleCode } from "@/components/pastille-code";
 import { CommentairesArticle } from "@/components/commentaires-article";
 import { FacadeVideo } from "@/components/facade-video";
+import { TexteRiche } from "@/components/texte-riche";
 
 type Params = { univers: string; slug: string };
 
@@ -202,9 +203,9 @@ export default async function PageArticle({
           ) : null}
         </header>
 
-        <p className="mb-10 border-l-2 border-ligne pl-5 text-xl leading-relaxed text-gris">
-          {article.chapo}
-        </p>
+        <div className="mb-10 border-l-2 border-ligne pl-5 text-xl leading-relaxed text-gris">
+          <TexteRiche texte={article.chapo} />
+        </div>
 
         {article.video ? (
           <figure className="mb-10">
