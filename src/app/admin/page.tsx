@@ -516,6 +516,7 @@ export default function AdminPage() {
   const [videoPrincipaleTitre, setVideoPrincipaleTitre] = useState("");
   const [tagsRaw, setTagsRaw] = useState("");
   const [datePublication, setDatePublication] = useState("");
+  const [numeroRef, setNumeroRef] = useState<number | string>("");
   const [universSecondaires, setUniversSecondaires] = useState<UniverseSlug[]>([]);
   const [metaTitre, setMetaTitre] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
@@ -615,6 +616,7 @@ export default function AdminPage() {
       slug: art.slug,
       refNumber: art.refNumber,
     });
+    setNumeroRef(art.refNumber !== undefined ? art.refNumber : "");
     setTitre(art.titre);
     setHeroTitle(art.heroTitle || "");
     setChapo(art.chapo);
@@ -680,6 +682,7 @@ export default function AdminPage() {
 
   const annulerModification = () => {
     setModeEdition({ actif: false, slug: "" });
+    setNumeroRef("");
     setTitre("");
     setHeroTitle("");
     setChapo("");
@@ -897,7 +900,12 @@ export default function AdminPage() {
         const methode = modeEdition.actif ? "PUT" : "POST";
         const payload = {
           slug: modeEdition.actif ? modeEdition.slug : undefined,
-          refNumber: modeEdition.actif ? modeEdition.refNumber : undefined,
+          refNumber:
+            numeroRef !== "" && !isNaN(Number(numeroRef))
+              ? Number(numeroRef)
+              : modeEdition.actif
+                ? modeEdition.refNumber
+                : undefined,
           titre,
           heroTitle,
           chapo,
@@ -938,6 +946,7 @@ export default function AdminPage() {
           }
           // Réinitialiser les champs principaux
           setTitre("");
+          setNumeroRef("");
           setHeroTitle("");
           setChapo("");
           setImageUrl("");
@@ -1169,7 +1178,7 @@ export default function AdminPage() {
 
           <form onSubmit={handlePublierArticle} className="space-y-8">
             {/* Barre de métadonnées légères */}
-            <div className="grid gap-4 rounded-lg border border-ligne bg-surface p-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 rounded-lg border border-ligne bg-surface p-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-gris">
                   Univers propriétaire
@@ -1189,6 +1198,28 @@ export default function AdminPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gris">
+                    Numéro d'article (#REF)
+                  </label>
+                  <span className="font-mono text-[10px] text-nexus">
+                    {numeroRef !== ""
+                      ? `REF:${univers.toUpperCase()}/${String(numeroRef).padStart(3, "0")}`
+                      : "Auto (selon dernier)"}
+                  </span>
+                </div>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={numeroRef}
+                  onChange={(e) => setNumeroRef(e.target.value)}
+                  placeholder="Auto (ex: 1)"
+                  className="mt-1.5 w-full rounded border border-ligne bg-noir p-2 text-xs font-mono text-blanc placeholder-gris/50 focus:border-nexus focus:outline-none"
+                />
               </div>
 
               {collectionsDisponibles.length > 0 ? (
@@ -2032,7 +2063,7 @@ export default function AdminPage() {
                             <div>
                               <div className="font-bold text-blanc line-clamp-1">{art.titre}</div>
                               <div className="mt-0.5 font-mono text-[0.6875rem] text-gris/70">
-                                #{art.refNumber} · /{art.slug}
+                                #{String(art.refNumber || 1).padStart(3, "0")} · /{art.slug}
                               </div>
                             </div>
                           </div>

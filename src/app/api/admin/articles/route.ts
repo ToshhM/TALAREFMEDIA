@@ -92,12 +92,51 @@ export async function POST(request: Request) {
       .split(/\s+/).length;
     const tempsDeLecture = Math.max(1, Math.ceil(motsTotal / 230));
 
-    // Numéro REF incrémental
-    const maxRef = Math.max(
-      0,
-      ...ARTICLES_DEMO.filter((a) => a.univers === univers).map((a) => a.refNumber || 0),
-    );
-    const refNumber = maxRef + 1;
+    // Détermination du numéro REF (manuel ou auto-incrémenté selon le dernier article de cet univers)
+    const adminClient = getAdminClient();
+    let refNumber: number;
+
+    if (
+      body.refNumber !== undefined &&
+      body.refNumber !== null &&
+      body.refNumber !== "" &&
+      !isNaN(Number(body.refNumber)) &&
+      Number(body.refNumber) > 0
+    ) {
+      refNumber = Math.floor(Number(body.refNumber));
+    } else {
+      let maxRef = 0;
+      if (adminClient) {
+        try {
+          const { data: dbArticles } = await adminClient
+            .from("articles")
+            .select("ref_number")
+            .eq("univers", univers);
+          if (dbArticles && dbArticles.length > 0) {
+            maxRef = Math.max(
+              0,
+              ...dbArticles.map((a: { ref_number?: number | null }) => a.ref_number || 0),
+            );
+          }
+        } catch {
+          // repli silencieux
+        }
+      }
+
+      if (maxRef === 0) {
+        try {
+          const { getArticles } = await import("@/lib/content");
+          const existants = await getArticles({ univers });
+          if (existants && existants.length > 0) {
+            maxRef = Math.max(0, ...existants.map((a) => a.refNumber || 0));
+          }
+        } catch {
+          // repli
+        }
+      }
+
+      refNumber = maxRef + 1;
+    }
 
     const nouvelArticle: Article = {
       slug,
@@ -132,7 +171,6 @@ export async function POST(request: Request) {
     };
 
     // Insertion Supabase si disponible
-    const adminClient = getAdminClient();
     if (adminClient) {
       try {
         await adminClient.from("articles").insert({
@@ -292,6 +330,7 @@ export async function PUT(request: Request) {
         await adminClient
           .from("articles")
           .update({
+            ref_number: articleMaj.refNumber !== undefined ? articleMaj.refNumber : null,
             titre: articleMaj.titre,
             hero_title: articleMaj.heroTitle || null,
             chapo: articleMaj.chapo,
