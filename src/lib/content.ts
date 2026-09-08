@@ -96,7 +96,11 @@ export async function getArticles(options?: {
   let articles = await tousLesArticles();
 
   if (options?.univers) {
-    articles = articles.filter((a) => a.univers === options.univers);
+    articles = articles.filter(
+      (a) =>
+        a.univers === options.univers ||
+        a.universSecondaires?.includes(options.univers as any),
+    );
   }
   if (options?.collection) {
     articles = articles.filter((a) => a.collection === options.collection);
@@ -135,7 +139,12 @@ export async function getArticle(
 ): Promise<Article | null> {
   const articles = await tousLesArticles();
   return (
-    articles.find((a) => a.univers === univers && a.slug === slug) ?? null
+    articles.find(
+      (a) =>
+        (a.univers === univers ||
+          a.universSecondaires?.includes(univers as any)) &&
+        a.slug === slug,
+    ) ?? null
   );
 }
 

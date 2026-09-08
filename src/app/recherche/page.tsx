@@ -27,11 +27,19 @@ export default async function PageRecherche({
 
   const tous = await getArticles();
   const resultats = requete
-    ? tous.filter((a) =>
-        `${a.titre} ${a.chapo}`
-          .toLowerCase()
-          .includes(requete.toLowerCase()),
-      )
+    ? tous.filter((a) => {
+        const texteComplet = [
+          a.titre,
+          a.chapo,
+          a.univers,
+          ...(a.universSecondaires || []),
+          ...(a.tags?.map((t) => t.nom) || []),
+          ...(a.auteurs?.map((au) => au.nom) || []),
+        ]
+          .join(" ")
+          .toLowerCase();
+        return texteComplet.includes(requete.toLowerCase());
+      })
     : [];
 
   return (
@@ -64,15 +72,52 @@ export default async function PageRecherche({
             {resultats.length} résultat{resultats.length > 1 ? "s" : ""} pour
             « {requete} »
           </p>
-          <ul className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {resultats.map((a) => (
-              <li key={a.slug}>
-                <CarteArticle article={a} />
-              </li>
-            ))}
-          </ul>
+          {resultats.length === 0 ? (
+            <div className="mt-6 max-w-xl rounded-lg border border-ligne bg-surface p-8 text-center">
+              <span className="text-3xl mb-2 block">🔍</span>
+              <p className="text-base font-bold text-blanc">Aucun article ne correspond à votre recherche.</p>
+              <p className="mt-2 text-xs text-gris">
+                Vérifiez l'orthographe ou essayez un mot-clé plus général (ex : IA, Cinéma, Sport, Politique, Musique).
+              </p>
+            </div>
+          ) : (
+            <ul className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {resultats.map((a) => (
+                <li key={a.slug}>
+                  <CarteArticle article={a} />
+                </li>
+              ))}
+            </ul>
+          )}
         </>
-      ) : null}
+      ) : (
+        <div className="mt-12 max-w-xl">
+          <p className="text-xs font-bold uppercase tracking-wider text-gris">
+            Sujets et univers populaires
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {[
+              "IA",
+              "Cinéma",
+              "Montage",
+              "Football",
+              "Sport",
+              "Politique",
+              "Musique",
+              "Tech",
+              "Manga",
+            ].map((sujet) => (
+              <a
+                key={sujet}
+                href={`/recherche?q=${encodeURIComponent(sujet)}`}
+                className="rounded border border-ligne bg-surface px-3 py-1.5 text-xs font-medium text-gris transition-colors hover:border-accent hover:text-accent"
+              >
+                {sujet}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

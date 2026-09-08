@@ -10,6 +10,7 @@ import type { Article, Bloc, UserProfile, UserRole } from "@/lib/types";
 import type { User } from "@supabase/supabase-js";
 import { parserSourceVideo } from "@/lib/video-utils";
 import { FacadeVideo } from "@/components/facade-video";
+import { slugifier } from "@/lib/reserved";
 
 type FormBloc = {
   _type:
@@ -377,6 +378,10 @@ export default function AdminPage() {
   const [videoPrincipaleUrl, setVideoPrincipaleUrl] = useState("");
   const [videoPrincipaleTitre, setVideoPrincipaleTitre] = useState("");
   const [tagsRaw, setTagsRaw] = useState("");
+  const [universSecondaires, setUniversSecondaires] = useState<UniverseSlug[]>([]);
+  const [metaTitre, setMetaTitre] = useState("");
+  const [metaDescription, setMetaDescription] = useState("");
+  const [afficherSeoAvance, setAfficherSeoAvance] = useState(false);
   const [blocs, setBlocs] = useState<FormBloc[]>([
     { _type: "paragraphe", texte: "" },
     { _type: "laRef", titre: "La référence", texte: "" },
@@ -483,6 +488,10 @@ export default function AdminPage() {
     setVideoPrincipaleUrl(art.video?.youtubeId || (art.video as any)?.url || "");
     setVideoPrincipaleTitre(art.video?.titre || "");
     setTagsRaw(art.tags?.map((t) => t.nom).join(", ") || "");
+    setUniversSecondaires(art.universSecondaires || []);
+    setMetaTitre(art.metaTitre || "");
+    setMetaDescription(art.metaDescription || "");
+    setAfficherSeoAvance(Boolean(art.metaTitre || art.metaDescription));
 
     const formBlocs: FormBloc[] = (art.corps || []).map((b) => {
       if (b._type === "paragraphe") return { _type: "paragraphe", texte: b.texte };
@@ -533,6 +542,10 @@ export default function AdminPage() {
     setVideoPrincipaleUrl("");
     setVideoPrincipaleTitre("");
     setTagsRaw("");
+    setUniversSecondaires([]);
+    setMetaTitre("");
+    setMetaDescription("");
+    setAfficherSeoAvance(false);
     setBlocs([
       { _type: "paragraphe", texte: "" },
       { _type: "laRef", titre: "La référence", texte: "" },
@@ -717,11 +730,14 @@ export default function AdminPage() {
           heroTitle,
           chapo,
           univers,
+          universSecondaires,
           collection: collection || undefined,
           imageUrl,
           imageCredit,
           imageAlt,
           tagsRaw,
+          metaTitre: metaTitre.trim() || undefined,
+          metaDescription: metaDescription.trim() || undefined,
           corps: corpsBlocs,
           video: videoArticle,
           auteurNom: user?.user_metadata?.full_name || user?.user_metadata?.pseudonyme || "La rédaction",
@@ -755,6 +771,10 @@ export default function AdminPage() {
           setVideoPrincipaleUrl("");
           setVideoPrincipaleTitre("");
           setTagsRaw("");
+          setUniversSecondaires([]);
+          setMetaTitre("");
+          setMetaDescription("");
+          setAfficherSeoAvance(false);
           setBlocs([
             { _type: "paragraphe", texte: "" },
             { _type: "laRef", titre: "La référence", texte: "" },
@@ -1028,6 +1048,45 @@ export default function AdminPage() {
                   placeholder="Cinéma, IA, Tournage..."
                   className="mt-1.5 w-full rounded border border-ligne bg-noir p-2 text-xs text-blanc placeholder-gris/50 focus:border-nexus focus:outline-none"
                 />
+              </div>
+
+              {/* Univers / Rubriques secondaires pour multi-diffusion */}
+              <div className="sm:col-span-3 border-t border-ligne/70 pt-3">
+                <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-blanc">
+                    Univers / Rubriques secondaires (croisements thématiques)
+                  </label>
+                  <span className="font-mono text-[0.625rem] text-gris">
+                    {universSecondaires.length > 0
+                      ? `${universSecondaires.length} univers supplémentaire${universSecondaires.length > 1 ? "s" : ""} sélectionné${universSecondaires.length > 1 ? "s" : ""}`
+                      : "Optionnel (ex: Agora pour politique + Nexus pour tech)"}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {UNIVERS.filter((u) => u.slug !== univers).map((u) => {
+                    const estCoche = universSecondaires.includes(u.slug);
+                    return (
+                      <button
+                        key={u.slug}
+                        type="button"
+                        onClick={() => {
+                          setUniversSecondaires((prev) =>
+                            estCoche ? prev.filter((s) => s !== u.slug) : [...prev, u.slug],
+                          );
+                        }}
+                        className={`flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-bold transition-all ${
+                          estCoche
+                            ? "border-nexus bg-nexus text-noir shadow-sm shadow-nexus/20"
+                            : "border-ligne bg-noir text-gris hover:border-gris hover:text-blanc"
+                        }`}
+                      >
+                        <span>{estCoche ? "✓" : "+"}</span>
+                        <span>{u.nom}</span>
+                        <span className="text-[0.625rem] opacity-70">({u.territoire})</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -1412,6 +1471,138 @@ export default function AdminPage() {
                 ))}
               </div>
 
+              {/* SECTION RÉFÉRENCEMENT GOOGLE & APERÇU SERP (SEO) */}
+              <div className="mt-12 rounded-xl border border-ligne bg-surface/40 p-5 sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ligne pb-4">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-nexus/10 text-lg text-nexus">
+                      🔍
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-blanc">
+                        Aperçu Référencement Google (SERP Preview)
+                      </h3>
+                      <p className="text-xs text-gris">
+                        Simulez en direct la manière dont l'article apparaîtra sur les moteurs de recherche.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAfficherSeoAvance((prev) => !prev)}
+                    className="rounded border border-ligne bg-surface px-3 py-1.5 text-xs font-bold text-blanc hover:border-nexus hover:text-nexus transition-colors"
+                  >
+                    {afficherSeoAvance ? "Masquer les réglages SEO" : "✏️ Personnaliser Titre & Meta"}
+                  </button>
+                </div>
+
+                {/* Simulation de résultat Google réaliste */}
+                <div className="mt-4 rounded-lg border border-ligne/80 bg-[#161718] p-4 sm:p-5 font-sans">
+                  {/* Fil d'Ariane Google */}
+                  <div className="flex items-center gap-2 text-xs text-[#bdc1c6]">
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-noir border border-ligne text-[0.625rem] font-black text-nexus">
+                      T
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:gap-1 truncate">
+                      <span className="font-medium text-[#dadce0]">Talaref Média</span>
+                      <span className="hidden sm:inline text-gris/60">·</span>
+                      <span className="text-[0.6875rem] text-[#bdc1c6] truncate">
+                        https://talarefmedia.fr › {univers} › {slugifier(titre) || "titre-article"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Titre Google (bleu cliquable) */}
+                  <div className="mt-2 text-base sm:text-lg font-medium text-[#8ab4f8] hover:underline cursor-pointer line-clamp-1">
+                    {metaTitre.trim() || titre || "Titre de l'article dans les résultats de recherche Google"}
+                  </div>
+
+                  {/* Meta Description Google (gris) */}
+                  <div className="mt-1.5 text-xs sm:text-sm leading-relaxed text-[#bdc1c6] line-clamp-2">
+                    {metaDescription.trim() ||
+                      chapo ||
+                      "La méta-description résume l'article pour inciter au clic sur Google. Par défaut, le chapô est repris automatiquement, ou vous pouvez le réécrire ci-dessous."}
+                  </div>
+
+                  {/* Indicateurs de calibrage SEO */}
+                  <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-ligne/40 pt-3 font-mono text-[0.6875rem]">
+                    <div>
+                      <span className="text-gris">Méta-Titre : </span>
+                      <span
+                        className={
+                          (metaTitre || titre).length >= 30 && (metaTitre || titre).length <= 65
+                            ? "font-bold text-arena"
+                            : (metaTitre || titre).length > 65
+                              ? "font-bold text-pop"
+                              : "text-gris"
+                        }
+                      >
+                        {(metaTitre || titre).length} / 65 signes
+                      </span>
+                      {(metaTitre || titre).length > 65 && (
+                        <span className="ml-1 text-pop font-sans text-[0.625rem]">(peut être tronqué par Google)</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-gris">Méta-Description : </span>
+                      <span
+                        className={
+                          (metaDescription || chapo).length >= 120 && (metaDescription || chapo).length <= 165
+                            ? "font-bold text-arena"
+                            : (metaDescription || chapo).length > 165
+                              ? "font-bold text-pop"
+                              : "text-gris"
+                        }
+                      >
+                        {(metaDescription || chapo).length} / 160 signes
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Champs de réécriture optionnelle */}
+                {afficherSeoAvance && (
+                  <div className="mt-4 grid gap-3.5 rounded-lg border border-nexus/30 bg-noir/40 p-4 animate-in fade-in duration-200">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold text-blanc">
+                          Méta-titre Google personnalisé (optionnel)
+                        </label>
+                        <span className="font-mono text-[0.625rem] text-gris">
+                          {metaTitre.length} signes · Idéal : 30 à 60
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        value={metaTitre}
+                        onChange={(e) => setMetaTitre(e.target.value)}
+                        placeholder="Laissez vide pour utiliser le titre principal de l'article..."
+                        className="mt-1.5 w-full rounded border border-ligne bg-noir p-2 text-xs text-blanc placeholder-gris/50 focus:border-nexus focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold text-blanc">
+                          Méta-description Google personnalisée (optionnel)
+                        </label>
+                        <span className="font-mono text-[0.625rem] text-gris">
+                          {metaDescription.length} signes · Idéal : 120 à 160
+                        </span>
+                      </div>
+                      <textarea
+                        rows={2}
+                        value={metaDescription}
+                        onChange={(e) => setMetaDescription(e.target.value)}
+                        placeholder="Laissez vide pour utiliser automatiquement le chapô de l'article..."
+                        className="mt-1.5 w-full resize-none rounded border border-ligne bg-noir p-2 text-xs text-blanc placeholder-gris/50 focus:border-nexus focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Bouton de publication / modification */}
               <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-ligne pt-6">
                 {modeEdition.actif ? (
@@ -1496,7 +1687,7 @@ export default function AdminPage() {
               <p className="text-sm text-gris">Aucun article trouvé pour ces critères.</p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-ligne bg-surface">
+            <div className="overflow-x-auto rounded-lg border border-ligne bg-surface">
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-ligne bg-surface-2 text-gris">
                   <tr>
@@ -1611,7 +1802,7 @@ export default function AdminPage() {
           {chargementUsers ? (
             <p className="text-xs text-gris">Chargement des utilisateurs...</p>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-ligne bg-surface">
+            <div className="overflow-x-auto rounded-lg border border-ligne bg-surface">
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-ligne bg-surface-2 text-gris">
                   <tr>

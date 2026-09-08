@@ -28,19 +28,30 @@ export async function generateMetadata({
   if (!article) return {};
 
   const url = `/${article.univers}/${article.slug}`;
+  const metaTitle = article.metaTitre?.trim() || article.titre;
+  const metaDesc = article.metaDescription?.trim() || article.chapo;
 
   return {
-    title: article.titre,
-    description: article.chapo,
+    title: metaTitle,
+    description: metaDesc,
     alternates: { canonical: url },
     openGraph: {
       type: "article",
-      title: article.titre,
-      description: article.chapo,
+      title: metaTitle,
+      description: metaDesc,
       url,
       publishedTime: article.publieLe,
       modifiedTime: article.misAJourLe,
       authors: article.auteurs.map((a) => a.nom),
+      images: article.imageDeUne?.url
+        ? [{ url: article.imageDeUne.url, alt: article.imageDeUne.alt || metaTitle }]
+        : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: metaTitle,
+      description: metaDesc,
+      images: article.imageDeUne?.url ? [article.imageDeUne.url] : [],
     },
   };
 }
@@ -136,6 +147,23 @@ export default async function PageArticle({
           <div className="flex flex-wrap items-center gap-3">
             <PastilleCode territoire={territoireActif} />
             <span className="badge-ref">{refLabel}</span>
+            {article.universSecondaires && article.universSecondaires.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {article.universSecondaires.map((uSec) => {
+                  const uObj = getUnivers(uSec);
+                  if (!uObj) return null;
+                  return (
+                    <Link
+                      key={uSec}
+                      href={`/${uSec}`}
+                      className="rounded border border-ligne bg-surface px-2 py-0.5 font-mono text-[0.6875rem] font-bold uppercase tracking-wider text-gris transition-colors hover:border-accent hover:text-accent"
+                    >
+                      + {uObj.nom}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <h1 className="titre-article mt-5 text-balance text-3xl sm:text-5xl">

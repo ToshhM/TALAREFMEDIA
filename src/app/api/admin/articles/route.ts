@@ -21,11 +21,14 @@ export async function POST(request: Request) {
       heroTitle,
       chapo,
       univers,
+      universSecondaires,
       collection,
       imageUrl,
       imageAlt,
       imageCredit,
       tagsRaw,
+      metaTitre,
+      metaDescription,
       corps,
       video,
       auteurNom,
@@ -107,8 +110,13 @@ export async function POST(request: Request) {
         credit: imageCredit?.trim() || "Talaref Media",
       },
       univers: univers as UniverseSlug,
+      universSecondaires: Array.isArray(universSecondaires)
+        ? (universSecondaires as UniverseSlug[])
+        : undefined,
       collection: (collection as CollectionSlug) || undefined,
       tags,
+      metaTitre: metaTitre?.trim() || undefined,
+      metaDescription: metaDescription?.trim() || undefined,
       auteurs: [
         {
           slug: auteurSlug || "redaction",
@@ -189,6 +197,7 @@ export async function PUT(request: Request) {
       heroTitle,
       chapo,
       univers,
+      universSecondaires,
       collection,
       imageUrl,
       imageAlt,
@@ -196,6 +205,8 @@ export async function PUT(request: Request) {
       tagsRaw,
       corps,
       video,
+      metaTitre,
+      metaDescription,
       refNumber,
     } = body;
 
@@ -249,8 +260,13 @@ export async function PUT(request: Request) {
         credit: imageCredit?.trim() || "Talaref Media",
       },
       univers: univers as UniverseSlug,
+      universSecondaires: Array.isArray(universSecondaires)
+        ? (universSecondaires as UniverseSlug[])
+        : undefined,
       collection: (collection as CollectionSlug) || undefined,
       tags,
+      metaTitre: metaTitre?.trim() || undefined,
+      metaDescription: metaDescription?.trim() || undefined,
       auteurs: existant?.auteurs || [
         {
           slug: "redaction",

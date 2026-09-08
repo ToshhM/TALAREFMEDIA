@@ -108,6 +108,8 @@ export type Article = {
   imageDeUne: Image;
   /** Univers propriétaire (obligatoire). */
   univers: UniverseSlug;
+  /** Univers / Rubriques secondaires pour multi-diffusion transversale (ex: Agora + Nexus). */
+  universSecondaires?: UniverseSlug[];
   /** Collection propriétaire (optionnel, ex: encre ou arcade sous pop). */
   collection?: CollectionSlug;
   /** Ancien champ de rubrique, conservé pour compatibilité ascendante. */
@@ -115,6 +117,10 @@ export type Article = {
   /** Format optionnel réservé V2 (test, décryptage, portrait…). */
   format?: string;
   tags: Tag[];
+  /** Titre SEO alternatif pour moteurs de recherche (si différent du titre principal). */
+  metaTitre?: string;
+  /** Description SEO alternative pour moteurs de recherche (si différente du chapô). */
+  metaDescription?: string;
   /** Un article non signé n'est pas publiable. */
   auteurs: Personne[];
   video?: Video;
