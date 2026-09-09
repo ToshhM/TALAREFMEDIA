@@ -92,8 +92,27 @@ function formaterLigneInline(texte: string, profondeur = 0): React.ReactNode[] {
     if (brut.startsWith("[") && match[2] && match[3]) {
       // Lien markdown [texte](url)
       const lienTexte = match[2];
-      const lienUrl = match[3];
-      const estExterne = lienUrl.startsWith("http") || lienUrl.startsWith("//");
+      let lienUrl = match[3].trim();
+
+      // Nettoyage des doublons de protocole fréquents
+      lienUrl = lienUrl.replace(/^(https?:\/\/)+https?:\/\//i, "https://");
+
+      // Auto-complétion https:// pour les adresses sans protocole (ex: www.site.com, site.fr)
+      if (
+        !lienUrl.startsWith("http://") &&
+        !lienUrl.startsWith("https://") &&
+        !lienUrl.startsWith("mailto:") &&
+        !lienUrl.startsWith("tel:") &&
+        !lienUrl.startsWith("/") &&
+        !lienUrl.startsWith("#")
+      ) {
+        lienUrl = `https://${lienUrl}`;
+      }
+
+      const estExterne =
+        lienUrl.startsWith("http://") ||
+        lienUrl.startsWith("https://") ||
+        lienUrl.startsWith("//");
 
       elements.push(
         <a
@@ -101,9 +120,17 @@ function formaterLigneInline(texte: string, profondeur = 0): React.ReactNode[] {
           href={lienUrl}
           target={estExterne ? "_blank" : undefined}
           rel={estExterne ? "noopener noreferrer" : undefined}
-          className="font-medium text-accent underline decoration-accent/60 underline-offset-4 transition-colors hover:text-blanc hover:decoration-blanc"
+          className="group/link inline-flex items-baseline gap-1 font-semibold text-accent underline decoration-accent/80 underline-offset-4 bg-accent/15 hover:bg-accent/30 px-1.5 py-0.5 rounded transition-all duration-150 hover:text-blanc hover:decoration-blanc shadow-sm cursor-pointer"
         >
-          {formaterLigneInline(lienTexte, profondeur + 1)}
+          <span>{formaterLigneInline(lienTexte, profondeur + 1)}</span>
+          {estExterne && (
+            <span
+              className="text-[0.7em] font-mono opacity-80 transition-transform group-hover/link:-translate-y-0.5 group-hover/link:translate-x-0.5 group-hover/link:opacity-100 select-none"
+              aria-hidden="true"
+            >
+              ↗
+            </span>
+          )}
         </a>
       );
     } else if (brut.startsWith("**") && match[4]) {
