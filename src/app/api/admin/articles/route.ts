@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 import { slugifier } from "@/lib/reserved";
 import { ARTICLES_DEMO } from "@/lib/sample-data";
@@ -202,6 +203,12 @@ export async function POST(request: Request) {
     // Enregistrement immédiat dans la collection en mémoire
     ARTICLES_DEMO.unshift(nouvelArticle);
 
+    try {
+      revalidatePath(`/${nouvelArticle.univers}/${nouvelArticle.slug}`);
+      revalidatePath(`/${nouvelArticle.univers}`);
+      revalidatePath("/");
+    } catch {}
+
     return NextResponse.json(
       {
         success: true,
@@ -360,6 +367,12 @@ export async function PUT(request: Request) {
       ARTICLES_DEMO[demoIndex] = articleMaj;
     }
 
+    try {
+      revalidatePath(`/${articleMaj.univers}/${articleMaj.slug}`);
+      revalidatePath(`/${articleMaj.univers}`);
+      revalidatePath("/");
+    } catch {}
+
     return NextResponse.json({
       success: true,
       article: articleMaj,
@@ -399,6 +412,10 @@ export async function DELETE(request: Request) {
     if (idx >= 0) {
       ARTICLES_DEMO.splice(idx, 1);
     }
+
+    try {
+      revalidatePath("/");
+    } catch {}
 
     return NextResponse.json({ success: true, message: "Article supprimé avec succès." });
   } catch (err: unknown) {

@@ -9,6 +9,9 @@ import { CarteArticle } from "@/components/carte-article";
 
 type Params = { univers: string };
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 /** Les six univers sont une liste fermée : on les rend tous à la compilation. */
 export function generateStaticParams() {
   return UNIVERS.map((u) => ({ univers: u.slug }));

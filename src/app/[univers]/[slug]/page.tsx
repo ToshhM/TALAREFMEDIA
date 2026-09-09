@@ -14,6 +14,9 @@ import { TexteRiche } from "@/components/texte-riche";
 
 type Params = { univers: string; slug: string };
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function generateStaticParams() {
   const articles = await getArticles();
   return articles.map((a) => ({ univers: a.univers, slug: a.slug }));

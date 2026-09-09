@@ -3,6 +3,9 @@ import { getArticles } from "@/lib/content";
 import { UNIVERS, getCollectionsForUnivers } from "@/lib/univers";
 import { CarteArticle } from "@/components/carte-article";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 /**
  * La page d'accueil — Spécification v3.0 §11.
  *
