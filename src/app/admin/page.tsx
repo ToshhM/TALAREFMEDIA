@@ -529,6 +529,177 @@ export default function AdminPage() {
     { _type: "laRef", titre: "La référence", texte: "" },
   ]);
 
+  const BROUILLON_STORAGE_KEY = "talaref_redaction_brouillon_auto";
+  const [brouillonSauvegardeLe, setBrouillonSauvegardeLe] = useState<string | null>(null);
+  const [brouillonDisponible, setBrouillonDisponible] = useState<boolean>(false);
+  const [brouillonInfoDate, setBrouillonInfoDate] = useState<string | null>(null);
+  const [initialiseDepuisBrouillon, setInitialiseDepuisBrouillon] = useState<boolean>(false);
+
+  const effacerBrouillon = () => {
+    try {
+      localStorage.removeItem(BROUILLON_STORAGE_KEY);
+    } catch {
+      // Ignorer si mode navigation privée stricte
+    }
+    setBrouillonDisponible(false);
+    setBrouillonInfoDate(null);
+    setBrouillonSauvegardeLe(null);
+  };
+
+  const restaurerBrouillon = () => {
+    try {
+      const raw = localStorage.getItem(BROUILLON_STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (typeof data.titre === "string") setTitre(data.titre);
+      if (typeof data.heroTitle === "string") setHeroTitle(data.heroTitle);
+      if (typeof data.chapo === "string") setChapo(data.chapo);
+      if (data.univers) setUnivers(data.univers);
+      if (data.collection !== undefined) setCollection(data.collection);
+      if (typeof data.imageUrl === "string") setImageUrl(data.imageUrl);
+      if (typeof data.imageCredit === "string") setImageCredit(data.imageCredit);
+      if (typeof data.imageAlt === "string") setImageAlt(data.imageAlt);
+      if (data.imageDisposition) setImageDisposition(data.imageDisposition);
+      if (data.imageCadrage) setImageCadrage(data.imageCadrage);
+      if (data.positionALaUne) setPositionALaUne(data.positionALaUne);
+      if (typeof data.tagsRaw === "string") setTagsRaw(data.tagsRaw);
+      if (typeof data.datePublication === "string") setDatePublication(data.datePublication);
+      if (data.numeroRef !== undefined) setNumeroRef(data.numeroRef);
+      if (Array.isArray(data.universSecondaires)) setUniversSecondaires(data.universSecondaires);
+      if (typeof data.metaTitre === "string") setMetaTitre(data.metaTitre);
+      if (typeof data.metaDescription === "string") setMetaDescription(data.metaDescription);
+      if (typeof data.videoPrincipaleUrl === "string") setVideoPrincipaleUrl(data.videoPrincipaleUrl);
+      if (typeof data.videoPrincipaleTitre === "string") setVideoPrincipaleTitre(data.videoPrincipaleTitre);
+      if (Array.isArray(data.blocs) && data.blocs.length > 0) setBlocs(data.blocs);
+      if (data.modeEdition && typeof data.modeEdition === "object") setModeEdition(data.modeEdition);
+      setBrouillonDisponible(false);
+      setBrouillonSauvegardeLe(
+        new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+      );
+    } catch (e) {
+      console.error("Erreur lors de la récupération du brouillon", e);
+    }
+  };
+
+  // 1. Détection au chargement d'un brouillon non publié stocké en cache local
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(BROUILLON_STORAGE_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        const aDuContenu =
+          (typeof data.titre === "string" && data.titre.trim().length > 0) ||
+          (typeof data.chapo === "string" && data.chapo.trim().length > 0) ||
+          (Array.isArray(data.blocs) &&
+            data.blocs.some((b: any) => (b.texte && b.texte.trim().length > 0) || b.url));
+
+        if (aDuContenu) {
+          setBrouillonDisponible(true);
+          if (data.savedAt) {
+            try {
+              const d = new Date(data.savedAt);
+              setBrouillonInfoDate(
+                `sauvegardé le ${d.toLocaleDateString("fr-FR")} à ${d.toLocaleTimeString("fr-FR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}`
+              );
+            } catch {
+              setBrouillonInfoDate(null);
+            }
+          }
+        }
+      }
+    } catch {
+      // Ignorer si localStorage indisponible
+    }
+    setInitialiseDepuisBrouillon(true);
+  }, []);
+
+  // 2. Sauvegarde automatique continue en cache local (debounce 1500ms, sans aucun appel réseau)
+  useEffect(() => {
+    if (!initialiseDepuisBrouillon) return;
+
+    // Ne rien sauvegarder si le formulaire est vide
+    const aDuContenu =
+      titre.trim().length > 0 ||
+      chapo.trim().length > 0 ||
+      imageUrl.trim().length > 0 ||
+      blocs.some(
+        (b) =>
+          (b.texte && b.texte.trim().length > 0) ||
+          b.url ||
+          (b.images && b.images.length > 0)
+      );
+
+    if (!aDuContenu) return;
+
+    const timer = setTimeout(() => {
+      try {
+        const donneesBrouillon = {
+          titre,
+          heroTitle,
+          chapo,
+          univers,
+          collection,
+          imageUrl,
+          imageCredit,
+          imageAlt,
+          imageDisposition,
+          imageCadrage,
+          positionALaUne,
+          tagsRaw,
+          datePublication,
+          numeroRef,
+          universSecondaires,
+          metaTitre,
+          metaDescription,
+          blocs,
+          videoPrincipaleUrl,
+          videoPrincipaleTitre,
+          modeEdition,
+          savedAt: new Date().toISOString(),
+        };
+        localStorage.setItem(BROUILLON_STORAGE_KEY, JSON.stringify(donneesBrouillon));
+        const maintenant = new Date();
+        setBrouillonSauvegardeLe(
+          maintenant.toLocaleTimeString("fr-FR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })
+        );
+      } catch (e) {
+        console.warn("Échec de la sauvegarde automatique locale :", e);
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [
+    titre,
+    heroTitle,
+    chapo,
+    univers,
+    collection,
+    imageUrl,
+    imageCredit,
+    imageAlt,
+    imageDisposition,
+    imageCadrage,
+    positionALaUne,
+    tagsRaw,
+    datePublication,
+    numeroRef,
+    universSecondaires,
+    metaTitre,
+    metaDescription,
+    blocs,
+    videoPrincipaleUrl,
+    videoPrincipaleTitre,
+    modeEdition,
+    initialiseDepuisBrouillon,
+  ]);
+
   const [publicationEnCours, startPublication] = useTransition();
   const [messagePublication, setMessagePublication] = useState<{
     type: "succes" | "erreur";
@@ -687,6 +858,7 @@ export default function AdminPage() {
   };
 
   const annulerModification = () => {
+    effacerBrouillon();
     setModeEdition({ actif: false, slug: "" });
     setNumeroRef("");
     setTitre("");
@@ -954,6 +1126,7 @@ export default function AdminPage() {
             url: data.url,
           });
           chargerArticles();
+          effacerBrouillon();
           if (modeEdition.actif) {
             setModeEdition({ actif: false, slug: "" });
           }
@@ -1192,7 +1365,73 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* Bannière de récupération du brouillon automatique */}
+          {brouillonDisponible && !modeEdition.actif && (
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-accent/60 bg-accent/10 p-4 shadow-sm animate-in fade-in duration-300">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">💾</span>
+                <div>
+                  <div className="text-[0.6875rem] font-bold uppercase tracking-wider text-accent">
+                    Brouillon non publié retrouvé
+                  </div>
+                  <div className="text-sm font-semibold text-blanc">
+                    Un travail en cours a été sauvegardé en cache dans votre navigateur {brouillonInfoDate ? `(${brouillonInfoDate})` : ""}.
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={restaurerBrouillon}
+                  className="rounded bg-accent px-4 py-2 text-xs font-bold text-noir hover:bg-accent/90 transition-all shadow-sm active:scale-95"
+                >
+                  ✓ Reprendre la rédaction
+                </button>
+                <button
+                  type="button"
+                  onClick={effacerBrouillon}
+                  className="rounded border border-ligne bg-surface px-3 py-2 text-xs font-semibold text-gris hover:text-encre hover:border-encre/40 transition-colors"
+                >
+                  ✕ Ignorer et effacer
+                </button>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handlePublierArticle} className="space-y-8">
+            {/* Barre de statut de sauvegarde automatique & Actions brouillon */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-gris">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`inline-block h-2 w-2 rounded-full transition-colors ${
+                    brouillonSauvegardeLe
+                      ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse"
+                      : "bg-gris/40"
+                  }`}
+                />
+                <span className="font-mono text-[11px]">
+                  {brouillonSauvegardeLe
+                    ? `Sauvegarde auto en cache local à ${brouillonSauvegardeLe}`
+                    : "Sauvegarde auto en cache local active"}
+                </span>
+                <span className="hidden sm:inline text-[10px] text-gris/60">
+                  (0 impact sur les lecteurs du site)
+                </span>
+              </div>
+              {(titre.trim() || chapo.trim() || blocs.some((b) => b.texte && b.texte.trim())) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm("Voulez-vous vraiment effacer le brouillon de secours sauvegardé dans votre navigateur ?")) {
+                      effacerBrouillon();
+                    }
+                  }}
+                  className="text-[11px] font-medium text-gris hover:text-encre transition-colors underline underline-offset-2"
+                >
+                  Vider le cache du brouillon
+                </button>
+              )}
+            </div>
             {/* Barre de métadonnées légères */}
             <div className="grid gap-4 rounded-lg border border-ligne bg-surface p-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               <div>
