@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { getALireAussi, getArticle, getArticles } from "@/lib/content";
 import { formaterRef, getCollection, getUnivers } from "@/lib/univers";
-import { SITE, dureeISO, formaterDate, formaterDuree, urlAbsolue } from "@/lib/site";
+import { SITE, dureeISO, formaterDate, formaterDuree, formaterObjectPosition, urlAbsolue } from "@/lib/site";
 import { RenduBlocs } from "@/components/blocs";
 import { BarreProgression } from "@/components/barre-progression";
 import { PastilleCode } from "@/components/pastille-code";
@@ -276,7 +276,7 @@ export default async function PageArticle({
                     <img
                       src={article.imageDeUne.url}
                       alt={altText}
-                      style={{ objectPosition: cadrage }}
+                      style={{ objectPosition: formaterObjectPosition(cadrage) }}
                       className="h-full w-full object-cover"
                     />
                   ) : (

@@ -25,7 +25,7 @@ export type TypeBloc =
   | "separateur";
 
 export type ImageDisposition = "standard" | "large" | "portrait" | "carre" | "adaptatif";
-export type ImageCadrage = "center" | "top" | "bottom";
+export type ImageCadrage = "center" | "top" | "bottom" | string;
 export type PositionALaUne = "une_1" | "une_2" | "une_3" | "standard";
 
 export type Image = {

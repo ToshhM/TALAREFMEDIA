@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Article } from "@/lib/types";
 import { formaterRef, getCollection, getUnivers } from "@/lib/univers";
-import { formaterDate, formaterDuree } from "@/lib/site";
+import { formaterDate, formaterDuree, formaterObjectPosition } from "@/lib/site";
 import { PastilleCode } from "./pastille-code";
 
 /**
@@ -25,6 +25,7 @@ export function CarteArticle({
   const territoireActif = collection ?? univers;
   const estUne = taille === "une";
   const refLabel = formaterRef(article.univers, article.refNumber, article.collection);
+  const estAdaptatif = article.imageDeUne?.disposition === "adaptatif";
 
   return (
     <article
@@ -33,19 +34,41 @@ export function CarteArticle({
     >
       <div className="relative aspect-video overflow-hidden bg-surface-2">
         {article.imageDeUne?.url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={article.imageDeUne.url}
-            alt={article.imageDeUne.alt || article.titre}
-            style={{ objectPosition: article.imageDeUne?.cadrage || "center" }}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-            loading="lazy"
-          />
+          estAdaptatif ? (
+            <div className="relative h-full w-full overflow-hidden flex items-center justify-center">
+              {/* Fond flou d'ambiance avec les teintes réelles de la photo */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={article.imageDeUne.url}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 h-full w-full object-cover blur-xl opacity-45 scale-110 pointer-events-none select-none transition-transform duration-500 group-hover:scale-125"
+              />
+              <div className="absolute inset-0 bg-noir/35 backdrop-blur-[1px]" aria-hidden="true" />
+              {/* Photo originale en plein format vertical sans aucun rognage */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={article.imageDeUne.url}
+                alt={article.imageDeUne.alt || article.titre}
+                className="relative z-10 max-h-full max-w-full object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-[1.03]"
+                loading="lazy"
+              />
+            </div>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={article.imageDeUne.url}
+              alt={article.imageDeUne.alt || article.titre}
+              style={{ objectPosition: formaterObjectPosition(article.imageDeUne?.cadrage) }}
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+              loading="lazy"
+            />
+          )
         ) : (
           <div className="texture" aria-hidden="true" />
         )}
         {article.video ? (
-          <span className="etiquette absolute bottom-2 right-2 bg-noir/80 px-1.5 py-1 text-blanc">
+          <span className="etiquette absolute bottom-2 right-2 z-20 bg-noir/80 px-1.5 py-1 text-blanc">
             Vidéo
           </span>
         ) : null}

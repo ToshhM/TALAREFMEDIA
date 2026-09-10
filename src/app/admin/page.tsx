@@ -12,6 +12,16 @@ import { parserSourceVideo } from "@/lib/video-utils";
 import { FacadeVideo } from "@/components/facade-video";
 import { slugifier } from "@/lib/reserved";
 import { EditeurTexteRiche } from "@/components/editeur-texte-riche";
+import { formaterObjectPosition } from "@/lib/site";
+
+function parseCadragePourcentage(cadrage: string): number {
+  if (cadrage === "top") return 0;
+  if (cadrage === "bottom") return 100;
+  if (cadrage === "center") return 50;
+  const match = cadrage.match(/^(\d{1,3})%?$/);
+  if (match) return Math.min(100, Math.max(0, parseInt(match[1], 10)));
+  return 50;
+}
 
 type FormBloc = {
   _type:
@@ -1669,64 +1679,121 @@ export default function AdminPage() {
                   )}
                 </div>
 
-                {/* Aperçu en direct de l'image de couverture selon l'orientation et le cadrage */}
+                {/* Aperçu interactif double : Page d'accueil (16:9) & Page Article */}
                 {imageUrl ? (
-                  <div className="relative mb-5 overflow-hidden rounded-md border border-ligne bg-surface-2">
-                    {imageDisposition === "adaptatif" ? (
-                      <div className="relative aspect-[4/5] sm:aspect-video w-full flex items-center justify-center overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={imageUrl}
-                          alt=""
-                          aria-hidden="true"
-                          className="absolute inset-0 h-full w-full object-cover blur-2xl opacity-40 scale-110"
-                        />
-                        <div className="absolute inset-0 bg-noir/40 backdrop-blur-[1px]" />
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={imageUrl}
-                          alt={imageAlt || "Aperçu"}
-                          className="relative z-10 max-h-full max-w-full object-contain p-2 drop-shadow-md"
-                        />
+                  <div className="mb-5 space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {/* 1. Aperçu Carte Accueil (16:9) */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs text-gris">
+                          <span className="flex items-center gap-1.5 text-blanc font-bold">
+                            <span>🏠</span> Aperçu Carte Accueil (16:9)
+                          </span>
+                          <span className="text-[10px] text-accent font-mono font-bold">
+                            {imageDisposition === "adaptatif"
+                              ? "✨ Mode Adaptatif"
+                              : `Cadrage : ${parseCadragePourcentage(imageCadrage)}%`}
+                          </span>
+                        </div>
+                        <div className="relative aspect-video w-full overflow-hidden rounded-md border border-ligne bg-surface-2 shadow-inner">
+                          {imageDisposition === "adaptatif" ? (
+                            <div className="relative h-full w-full overflow-hidden flex items-center justify-center">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={imageUrl}
+                                alt=""
+                                aria-hidden="true"
+                                className="absolute inset-0 h-full w-full object-cover blur-xl opacity-45 scale-110"
+                              />
+                              <div className="absolute inset-0 bg-noir/35 backdrop-blur-[1px]" />
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={imageUrl}
+                                alt="Aperçu Accueil"
+                                className="relative z-10 max-h-full max-w-full object-contain drop-shadow-md"
+                              />
+                            </div>
+                          ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={imageUrl}
+                              alt="Aperçu Accueil"
+                              style={{ objectPosition: formaterObjectPosition(imageCadrage) }}
+                              className="h-full w-full object-cover transition-[object-position] duration-150 ease-out"
+                            />
+                          )}
+                          <div className="absolute bottom-1.5 left-2 z-20 rounded bg-noir/85 px-2 py-0.5 font-mono text-[9px] text-blanc border border-blanc/10">
+                            Grille Accueil
+                          </div>
+                        </div>
                       </div>
-                    ) : (
-                      <div
-                        className={`relative overflow-hidden ${
-                          imageDisposition === "portrait"
-                            ? "aspect-[3/4] max-w-sm mx-auto"
-                            : imageDisposition === "carre"
-                              ? "aspect-square max-w-sm mx-auto"
-                              : "aspect-video w-full"
-                        }`}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={imageUrl}
-                          alt={imageAlt || "Aperçu de la couverture"}
-                          style={{ objectPosition: imageCadrage }}
-                          className="h-full w-full object-cover"
-                        />
+
+                      {/* 2. Aperçu Page Article */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs text-gris">
+                          <span className="flex items-center gap-1.5 text-blanc font-bold">
+                            <span>📄</span> Aperçu Page Article
+                          </span>
+                          <span className="text-[10px] text-nexus font-mono font-bold">
+                            {imageDisposition === "standard" && "16:9 Paysage"}
+                            {imageDisposition === "portrait" && "3:4 Portrait"}
+                            {imageDisposition === "carre" && "1:1 Carré"}
+                            {imageDisposition === "adaptatif" && "Photo entière"}
+                          </span>
+                        </div>
+                        <div className="relative aspect-video w-full overflow-hidden rounded-md border border-ligne bg-surface-2 flex items-center justify-center">
+                          {imageDisposition === "adaptatif" ? (
+                            <div className="relative h-full w-full overflow-hidden flex items-center justify-center">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={imageUrl}
+                                alt=""
+                                aria-hidden="true"
+                                className="absolute inset-0 h-full w-full object-cover blur-xl opacity-40 scale-110"
+                              />
+                              <div className="absolute inset-0 bg-noir/30 backdrop-blur-[1px]" />
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={imageUrl}
+                                alt="Aperçu Article"
+                                className="relative z-10 max-h-full max-w-full object-contain drop-shadow-md"
+                              />
+                            </div>
+                          ) : (
+                            <div
+                              className={`relative overflow-hidden h-full ${
+                                imageDisposition === "portrait"
+                                  ? "aspect-[3/4] mx-auto"
+                                  : imageDisposition === "carre"
+                                    ? "aspect-square mx-auto"
+                                    : "w-full"
+                              }`}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={imageUrl}
+                                alt={imageAlt || "Aperçu Article"}
+                                style={{ objectPosition: formaterObjectPosition(imageCadrage) }}
+                                className="h-full w-full object-cover transition-[object-position] duration-150 ease-out"
+                              />
+                            </div>
+                          )}
+                          <div className="absolute bottom-1.5 left-2 z-20 rounded bg-noir/85 px-2 py-0.5 font-mono text-[9px] text-blanc border border-blanc/10">
+                            Page Article
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    <span className="absolute bottom-2 left-2 z-20 rounded bg-noir/80 px-2 py-1 font-mono text-[0.625rem] text-blanc border border-blanc/10 backdrop-blur-md">
-                      {imageCredit || "Talaref Media"}
-                    </span>
-                    <span className="absolute top-2 right-2 z-20 rounded bg-noir/80 px-2.5 py-1 font-mono text-[0.6875rem] font-bold text-accent border border-blanc/10 backdrop-blur-md">
-                      {imageDisposition === "standard" && "🏞️ 16:9 Paysage"}
-                      {imageDisposition === "portrait" && "📱 3:4 Portrait"}
-                      {imageDisposition === "carre" && "⬛ 1:1 Carré"}
-                      {imageDisposition === "adaptatif" && "✨ Photo entière (Flou d'ambiance)"}
-                    </span>
+                    </div>
                   </div>
                 ) : null}
 
                 {/* Commandes d'orientation et de cadrage focal */}
-                <div className="mb-5 grid gap-4 rounded-md border border-ligne/60 bg-surface/60 p-3.5 sm:grid-cols-2">
+                <div className="mb-5 space-y-4 rounded-md border border-ligne/60 bg-surface/60 p-4">
                   <div>
                     <label className="block text-[11px] font-bold uppercase tracking-wider text-blanc mb-2">
-                      1. Orientation de la photo
+                      1. Format & Présentation de la photo
                     </label>
-                    <div className="grid grid-cols-2 gap-1.5">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       <button
                         type="button"
                         onClick={() => setImageDisposition("standard")}
@@ -1768,73 +1835,87 @@ export default function AdminPage() {
                         onClick={() => setImageDisposition("adaptatif")}
                         className={`flex items-center justify-center gap-1.5 rounded px-2.5 py-2 text-xs font-semibold transition-all ${
                           imageDisposition === "adaptatif"
-                            ? "bg-accent text-noir font-bold shadow"
+                            ? "bg-accent text-noir font-bold shadow ring-2 ring-accent/30"
                             : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
                         }`}
-                        title="Affiche l'image entière sans coupure avec fond flou d'ambiance"
+                        title="Photo entière sans rognage avec flou d'ambiance sur l'accueil et l'article"
                       >
                         <span>✨</span>
-                        <span>Photo entière</span>
+                        <span>Photo entière (Adaptatif)</span>
                       </button>
                     </div>
                   </div>
 
-                  {imageDisposition !== "adaptatif" ? (
-                    <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-wider text-blanc mb-2">
-                        2. Cadrage vertical (point focal)
+                  {/* Curseur de recadrage interactif */}
+                  <div className="pt-3 border-t border-ligne/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-blanc flex items-center gap-1.5">
+                        <span>🎚️</span> 2. Curseur de recadrage vertical
                       </label>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setImageCadrage("top")}
-                          className={`rounded px-2 py-2 text-xs font-semibold transition-all ${
-                            imageCadrage === "top"
-                              ? "bg-nexus text-noir font-bold shadow"
-                              : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
-                          }`}
-                          title="Privilégie le haut pour ne pas couper les visages"
-                        >
-                          ⬆️ Haut (Visage)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setImageCadrage("center")}
-                          className={`rounded px-2 py-2 text-xs font-semibold transition-all ${
-                            imageCadrage === "center"
-                              ? "bg-nexus text-noir font-bold shadow"
-                              : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
-                          }`}
-                        >
-                          ⏺️ Centre
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setImageCadrage("bottom")}
-                          className={`rounded px-2 py-2 text-xs font-semibold transition-all ${
-                            imageCadrage === "bottom"
-                              ? "bg-nexus text-noir font-bold shadow"
-                              : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
-                          }`}
-                        >
-                          ⬇️ Bas
-                        </button>
+                      <span className="font-mono text-xs font-bold text-nexus bg-nexus/15 px-2.5 py-0.5 rounded border border-nexus/30">
+                        {parseCadragePourcentage(imageCadrage)}% —{" "}
+                        {parseCadragePourcentage(imageCadrage) <= 15
+                          ? "Haut (Ciel / Tête)"
+                          : parseCadragePourcentage(imageCadrage) <= 35
+                            ? "Visage / Lunettes"
+                            : parseCadragePourcentage(imageCadrage) <= 65
+                              ? "Centre"
+                              : parseCadragePourcentage(imageCadrage) <= 85
+                                ? "Buste / Tenue"
+                                : "Bas / Voiture"}
+                      </span>
+                    </div>
+
+                    {/* Le slider / curseur */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-mono text-gris min-w-[50px]">0% (Haut)</span>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={parseCadragePourcentage(imageCadrage)}
+                          onChange={(e) => setImageCadrage(`${e.target.value}%`)}
+                          className="w-full h-2 rounded-lg bg-surface-2 border border-ligne accent-nexus cursor-pointer"
+                        />
+                        <span className="text-[10px] font-mono text-gris text-right min-w-[50px]">100% (Bas)</span>
                       </div>
-                      <p className="mt-1.5 text-[10px] text-gris/70">
-                        Ajuste l'alignement sur l'article et sur les cartes de la page d'accueil.
+
+                      {/* Raccourcis rapides à 1 clic */}
+                      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+                        {[
+                          { val: "0%", pct: 0, label: "⬆️ 0% Haut" },
+                          { val: "25%", pct: 25, label: "👤 25% Visage" },
+                          { val: "50%", pct: 50, label: "⏺️ 50% Centre" },
+                          { val: "75%", pct: 75, label: "👗 75% Tenue" },
+                          { val: "100%", pct: 100, label: "⬇️ 100% Bas" },
+                        ].map((p) => {
+                          const actif = parseCadragePourcentage(imageCadrage) === p.pct;
+                          return (
+                            <button
+                              key={p.val}
+                              type="button"
+                              onClick={() => setImageCadrage(p.val)}
+                              className={`rounded border px-2 py-1.5 text-xs font-semibold transition-all ${
+                                actif
+                                  ? "border-nexus bg-nexus text-noir font-bold shadow"
+                                  : "border-ligne bg-noir text-gris hover:border-blanc/30 hover:text-blanc"
+                              }`}
+                            >
+                              {p.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <p className="text-[11px] text-gris/80">
+                        {imageDisposition === "adaptatif"
+                          ? "💡 En mode « Photo entière », la photo verticale apparaît déjà à 100% sans rognage sur la carte d'accueil et sur l'article. Le curseur reste actif si vous basculez sur un format standard."
+                          : "💡 Glissez le curseur pour caler le cadrage exact (ex: sur les yeux de la mannequin ou sur la voiture). Regardez l'aperçu « Carte Accueil (16:9) » au-dessus pour ajuster au millimètre près !"}
                       </p>
                     </div>
-                  ) : (
-                    <div className="flex flex-col justify-center rounded border border-ligne/40 bg-noir/40 p-3 text-xs text-gris">
-                      <p className="font-semibold text-blanc flex items-center gap-1.5">
-                        <span>✨</span>
-                        <span>Mode haute fidélité</span>
-                      </p>
-                      <p className="mt-1 text-[11px]">
-                        L'image s'affiche à 100% de ses dimensions naturelles sans aucun rognage, entourée d'un halo flouté reprenant ses couleurs.
-                      </p>
-                    </div>
-                  )}
+                  </div>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-3">

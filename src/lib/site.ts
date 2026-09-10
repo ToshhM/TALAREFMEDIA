@@ -42,3 +42,19 @@ export function dureeISO(secondes: number): string {
   const s = secondes % 60;
   return `PT${m}M${s}S`;
 }
+
+/**
+ * Calcule le style CSS `object-position` à partir du cadrage
+ * ("top", "center", "bottom", ou un pourcentage "0%" à "100%").
+ */
+export function formaterObjectPosition(cadrage?: string): string {
+  if (!cadrage) return "center center";
+  if (cadrage === "top") return "center 0%";
+  if (cadrage === "bottom") return "center 100%";
+  if (cadrage === "center") return "center 50%";
+  const match = cadrage.match(/^(\d{1,3})%?$/);
+  if (match) {
+    return `center ${match[1]}%`;
+  }
+  return cadrage;
+}
