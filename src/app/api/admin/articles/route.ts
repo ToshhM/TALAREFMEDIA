@@ -27,6 +27,10 @@ export async function POST(request: Request) {
       imageUrl,
       imageAlt,
       imageCredit,
+      imageDisposition,
+      imageCadrage,
+      format,
+      positionALaUne,
       tagsRaw,
       metaTitre,
       metaDescription,
@@ -139,6 +143,9 @@ export async function POST(request: Request) {
       refNumber = maxRef + 1;
     }
 
+    const formatChoisi = format || positionALaUne;
+    const formatFinal = formatChoisi && formatChoisi !== "standard" ? formatChoisi : null;
+
     const nouvelArticle: Article = {
       slug,
       refNumber,
@@ -149,12 +156,15 @@ export async function POST(request: Request) {
         url: imageUrl?.trim() || "",
         alt: imageAlt?.trim() || titre.trim(),
         credit: imageCredit?.trim() || "Talaref Media",
+        disposition: imageDisposition || "standard",
+        cadrage: imageCadrage || "center",
       },
       univers: univers as UniverseSlug,
       universSecondaires: Array.isArray(universSecondaires)
         ? (universSecondaires as UniverseSlug[])
         : undefined,
       collection: (collection as CollectionSlug) || undefined,
+      format: formatFinal,
       tags,
       metaTitre: metaTitre?.trim() || undefined,
       metaDescription: metaDescription?.trim() || undefined,
@@ -174,6 +184,9 @@ export async function POST(request: Request) {
     // Insertion Supabase si disponible
     if (adminClient) {
       try {
+        if (formatFinal && ["une_1", "une_2", "une_3"].includes(formatFinal)) {
+          await adminClient.from("articles").update({ format: null }).eq("format", formatFinal);
+        }
         await adminClient.from("articles").insert({
           slug: nouvelArticle.slug,
           ref_number: nouvelArticle.refNumber,
@@ -183,6 +196,7 @@ export async function POST(request: Request) {
           image_de_une: nouvelArticle.imageDeUne,
           univers: nouvelArticle.univers,
           collection: nouvelArticle.collection || null,
+          format: nouvelArticle.format || null,
           tags: nouvelArticle.tags,
           auteurs: nouvelArticle.auteurs,
           video: nouvelArticle.video || null,
@@ -248,6 +262,10 @@ export async function PUT(request: Request) {
       imageUrl,
       imageAlt,
       imageCredit,
+      imageDisposition,
+      imageCadrage,
+      format,
+      positionALaUne,
       tagsRaw,
       corps,
       video,
@@ -295,6 +313,9 @@ export async function PUT(request: Request) {
     const { getArticle } = await import("@/lib/content");
     const existant = await getArticle(univers, slug);
 
+    const formatChoisi = format !== undefined ? format : (positionALaUne !== undefined ? positionALaUne : existant?.format);
+    const formatFinal = formatChoisi && formatChoisi !== "standard" ? formatChoisi : null;
+
     const articleMaj: Article = {
       slug,
       refNumber: refNumber !== undefined ? refNumber : existant?.refNumber,
@@ -305,12 +326,15 @@ export async function PUT(request: Request) {
         url: imageUrl?.trim() || "",
         alt: imageAlt?.trim() || titre.trim(),
         credit: imageCredit?.trim() || "Talaref Media",
+        disposition: imageDisposition || existant?.imageDeUne?.disposition || "standard",
+        cadrage: imageCadrage || existant?.imageDeUne?.cadrage || "center",
       },
       univers: univers as UniverseSlug,
       universSecondaires: Array.isArray(universSecondaires)
         ? (universSecondaires as UniverseSlug[])
         : undefined,
       collection: (collection as CollectionSlug) || undefined,
+      format: formatFinal,
       tags,
       metaTitre: metaTitre?.trim() || undefined,
       metaDescription: metaDescription?.trim() || undefined,
@@ -334,6 +358,14 @@ export async function PUT(request: Request) {
     const adminClient = getAdminClient();
     if (adminClient) {
       try {
+        if (formatFinal && ["une_1", "une_2", "une_3"].includes(formatFinal)) {
+          // Réinitialiser tout autre article qui aurait cette même position
+          await adminClient
+            .from("articles")
+            .update({ format: null })
+            .eq("format", formatFinal)
+            .neq("slug", slug);
+        }
         await adminClient
           .from("articles")
           .update({
@@ -344,6 +376,7 @@ export async function PUT(request: Request) {
             image_de_une: articleMaj.imageDeUne,
             univers: articleMaj.univers,
             collection: articleMaj.collection || null,
+            format: articleMaj.format || null,
             tags: articleMaj.tags,
             video: articleMaj.video || null,
             corps: articleMaj.corps,
@@ -418,6 +451,55 @@ export async function DELETE(request: Request) {
     } catch {}
 
     return NextResponse.json({ success: true, message: "Article supprimé avec succès." });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Erreur serveur";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { slug, format } = body;
+
+    if (!slug) {
+      return NextResponse.json({ error: "Slug de l'article requis." }, { status: 400 });
+    }
+
+    const formatFinal = format === "standard" || !format ? null : format;
+    const adminClient = getAdminClient();
+
+    if (adminClient) {
+      try {
+        if (formatFinal && ["une_1", "une_2", "une_3"].includes(formatFinal)) {
+          // Réinitialiser tout autre article occupant déjà cette position
+          await adminClient
+            .from("articles")
+            .update({ format: null })
+            .eq("format", formatFinal)
+            .neq("slug", slug);
+        }
+        await adminClient
+          .from("articles")
+          .update({ format: formatFinal })
+          .eq("slug", slug);
+      } catch {
+        // repli
+      }
+    }
+
+    // Mise à jour en mémoire si présent
+    const demoIndex = ARTICLES_DEMO.findIndex((a) => a.slug === slug);
+    if (demoIndex >= 0) {
+      ARTICLES_DEMO[demoIndex] = { ...ARTICLES_DEMO[demoIndex], format: formatFinal || undefined };
+    }
+
+    try {
+      revalidatePath("/");
+      revalidatePath("/", "layout");
+    } catch {}
+
+    return NextResponse.json({ success: true, slug, format: formatFinal });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Erreur serveur";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { UNIVERS, getCollectionsForUnivers } from "@/lib/univers";
 import type { CollectionSlug, UniverseSlug } from "@/lib/univers";
-import type { Article, Bloc, UserProfile, UserRole } from "@/lib/types";
+import type { Article, Bloc, ImageCadrage, ImageDisposition, PositionALaUne, UserProfile, UserRole } from "@/lib/types";
 import type { User } from "@supabase/supabase-js";
 import { parserSourceVideo } from "@/lib/video-utils";
 import { FacadeVideo } from "@/components/facade-video";
@@ -511,6 +511,9 @@ export default function AdminPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [imageCredit, setImageCredit] = useState("Talaref Media");
   const [imageAlt, setImageAlt] = useState("");
+  const [imageDisposition, setImageDisposition] = useState<ImageDisposition>("standard");
+  const [imageCadrage, setImageCadrage] = useState<ImageCadrage>("center");
+  const [positionALaUne, setPositionALaUne] = useState<PositionALaUne>("standard");
   const [uploadEnCoursUne, setUploadEnCoursUne] = useState(false);
   const [videoPrincipaleUrl, setVideoPrincipaleUrl] = useState("");
   const [videoPrincipaleTitre, setVideoPrincipaleTitre] = useState("");
@@ -625,6 +628,9 @@ export default function AdminPage() {
     setImageUrl(art.imageDeUne?.url || "");
     setImageCredit(art.imageDeUne?.credit || "Talaref Media");
     setImageAlt(art.imageDeUne?.alt || "");
+    setImageDisposition(art.imageDeUne?.disposition || "standard");
+    setImageCadrage(art.imageDeUne?.cadrage || "center");
+    setPositionALaUne((art.format as PositionALaUne) || "standard");
     setVideoPrincipaleUrl(art.video?.youtubeId || (art.video as any)?.url || "");
     setVideoPrincipaleTitre(art.video?.titre || "");
     setTagsRaw(art.tags?.map((t) => t.nom).join(", ") || "");
@@ -687,6 +693,9 @@ export default function AdminPage() {
     setHeroTitle("");
     setChapo("");
     setImageUrl("");
+    setImageDisposition("standard");
+    setImageCadrage("center");
+    setPositionALaUne("standard");
     setVideoPrincipaleUrl("");
     setVideoPrincipaleTitre("");
     setTagsRaw("");
@@ -915,6 +924,10 @@ export default function AdminPage() {
           imageUrl,
           imageCredit,
           imageAlt,
+          imageDisposition,
+          imageCadrage,
+          format: positionALaUne,
+          positionALaUne,
           tagsRaw,
           publieLe: datePublication ? new Date(datePublication).toISOString() : undefined,
           metaTitre: metaTitre.trim() || undefined,
@@ -950,6 +963,9 @@ export default function AdminPage() {
           setHeroTitle("");
           setChapo("");
           setImageUrl("");
+          setImageDisposition("standard");
+          setImageCadrage("center");
+          setPositionALaUne("standard");
           setVideoPrincipaleUrl("");
           setVideoPrincipaleTitre("");
           setTagsRaw("");
@@ -1178,7 +1194,7 @@ export default function AdminPage() {
 
           <form onSubmit={handlePublierArticle} className="space-y-8">
             {/* Barre de métadonnées légères */}
-            <div className="grid gap-4 rounded-lg border border-ligne bg-surface p-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <div className="grid gap-4 rounded-lg border border-ligne bg-surface p-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-gris">
                   Univers propriétaire
@@ -1197,6 +1213,26 @@ export default function AdminPage() {
                       {u.nom} — {u.territoire}
                     </option>
                   ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-gris">
+                  À la une (Accueil)
+                </label>
+                <select
+                  value={positionALaUne}
+                  onChange={(e) => setPositionALaUne(e.target.value as PositionALaUne)}
+                  className={`mt-1.5 w-full rounded border p-2 text-xs font-bold focus:border-nexus focus:outline-none transition-colors ${
+                    positionALaUne !== "standard"
+                      ? "border-accent bg-accent/15 text-accent"
+                      : "border-ligne bg-noir text-blanc"
+                  }`}
+                >
+                  <option value="standard">Automatique (selon date)</option>
+                  <option value="une_1">⭐ Grande Une (#1)</option>
+                  <option value="une_2">⭐ Deuxième Une (#2)</option>
+                  <option value="une_3">⭐ Troisième Une (#3)</option>
                 </select>
               </div>
 
@@ -1375,9 +1411,14 @@ export default function AdminPage() {
               {/* Image de Une */}
               <div className="mb-10 rounded-lg border border-ligne/70 bg-noir/40 p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-bold uppercase tracking-wider text-blanc">
-                    Image de couverture (16:9) — max 2 Mo ou lien web direct
-                  </p>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-blanc">
+                      Image de couverture — max 2 Mo ou lien web direct
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-gris">
+                      S'adapte automatiquement selon l'orientation (Paysage, Portrait, Carré, ou Photo entière sans rognage).
+                    </p>
+                  </div>
                   {imageUrl && (
                     <button
                       type="button"
@@ -1389,20 +1430,173 @@ export default function AdminPage() {
                   )}
                 </div>
 
-                {/* Aperçu en direct de l'image de couverture si renseignée */}
+                {/* Aperçu en direct de l'image de couverture selon l'orientation et le cadrage */}
                 {imageUrl ? (
-                  <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-md border border-ligne bg-surface-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={imageUrl}
-                      alt={imageAlt || "Aperçu de la couverture"}
-                      className="h-full w-full object-cover"
-                    />
-                    <span className="absolute bottom-2 left-2 rounded bg-noir/80 px-2 py-1 font-mono text-[0.625rem] text-blanc">
+                  <div className="relative mb-5 overflow-hidden rounded-md border border-ligne bg-surface-2">
+                    {imageDisposition === "adaptatif" ? (
+                      <div className="relative aspect-[4/5] sm:aspect-video w-full flex items-center justify-center overflow-hidden">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imageUrl}
+                          alt=""
+                          aria-hidden="true"
+                          className="absolute inset-0 h-full w-full object-cover blur-2xl opacity-40 scale-110"
+                        />
+                        <div className="absolute inset-0 bg-noir/40 backdrop-blur-[1px]" />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imageUrl}
+                          alt={imageAlt || "Aperçu"}
+                          className="relative z-10 max-h-full max-w-full object-contain p-2 drop-shadow-md"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className={`relative overflow-hidden ${
+                          imageDisposition === "portrait"
+                            ? "aspect-[3/4] max-w-sm mx-auto"
+                            : imageDisposition === "carre"
+                              ? "aspect-square max-w-sm mx-auto"
+                              : "aspect-video w-full"
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imageUrl}
+                          alt={imageAlt || "Aperçu de la couverture"}
+                          style={{ objectPosition: imageCadrage }}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <span className="absolute bottom-2 left-2 z-20 rounded bg-noir/80 px-2 py-1 font-mono text-[0.625rem] text-blanc border border-blanc/10 backdrop-blur-md">
                       {imageCredit || "Talaref Media"}
+                    </span>
+                    <span className="absolute top-2 right-2 z-20 rounded bg-noir/80 px-2.5 py-1 font-mono text-[0.6875rem] font-bold text-accent border border-blanc/10 backdrop-blur-md">
+                      {imageDisposition === "standard" && "🏞️ 16:9 Paysage"}
+                      {imageDisposition === "portrait" && "📱 3:4 Portrait"}
+                      {imageDisposition === "carre" && "⬛ 1:1 Carré"}
+                      {imageDisposition === "adaptatif" && "✨ Photo entière (Flou d'ambiance)"}
                     </span>
                   </div>
                 ) : null}
+
+                {/* Commandes d'orientation et de cadrage focal */}
+                <div className="mb-5 grid gap-4 rounded-md border border-ligne/60 bg-surface/60 p-3.5 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-blanc mb-2">
+                      1. Orientation de la photo
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setImageDisposition("standard")}
+                        className={`flex items-center justify-center gap-1.5 rounded px-2.5 py-2 text-xs font-semibold transition-all ${
+                          imageDisposition === "standard"
+                            ? "bg-accent text-noir font-bold shadow"
+                            : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
+                        }`}
+                      >
+                        <span>🏞️</span>
+                        <span>Paysage (16:9)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImageDisposition("portrait")}
+                        className={`flex items-center justify-center gap-1.5 rounded px-2.5 py-2 text-xs font-semibold transition-all ${
+                          imageDisposition === "portrait"
+                            ? "bg-accent text-noir font-bold shadow"
+                            : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
+                        }`}
+                      >
+                        <span>📱</span>
+                        <span>Portrait (3:4)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImageDisposition("carre")}
+                        className={`flex items-center justify-center gap-1.5 rounded px-2.5 py-2 text-xs font-semibold transition-all ${
+                          imageDisposition === "carre"
+                            ? "bg-accent text-noir font-bold shadow"
+                            : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
+                        }`}
+                      >
+                        <span>⬛</span>
+                        <span>Carré (1:1)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImageDisposition("adaptatif")}
+                        className={`flex items-center justify-center gap-1.5 rounded px-2.5 py-2 text-xs font-semibold transition-all ${
+                          imageDisposition === "adaptatif"
+                            ? "bg-accent text-noir font-bold shadow"
+                            : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
+                        }`}
+                        title="Affiche l'image entière sans coupure avec fond flou d'ambiance"
+                      >
+                        <span>✨</span>
+                        <span>Photo entière</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {imageDisposition !== "adaptatif" ? (
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-blanc mb-2">
+                        2. Cadrage vertical (point focal)
+                      </label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setImageCadrage("top")}
+                          className={`rounded px-2 py-2 text-xs font-semibold transition-all ${
+                            imageCadrage === "top"
+                              ? "bg-nexus text-noir font-bold shadow"
+                              : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
+                          }`}
+                          title="Privilégie le haut pour ne pas couper les visages"
+                        >
+                          ⬆️ Haut (Visage)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setImageCadrage("center")}
+                          className={`rounded px-2 py-2 text-xs font-semibold transition-all ${
+                            imageCadrage === "center"
+                              ? "bg-nexus text-noir font-bold shadow"
+                              : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
+                          }`}
+                        >
+                          ⏺️ Centre
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setImageCadrage("bottom")}
+                          className={`rounded px-2 py-2 text-xs font-semibold transition-all ${
+                            imageCadrage === "bottom"
+                              ? "bg-nexus text-noir font-bold shadow"
+                              : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
+                          }`}
+                        >
+                          ⬇️ Bas
+                        </button>
+                      </div>
+                      <p className="mt-1.5 text-[10px] text-gris/70">
+                        Ajuste l'alignement sur l'article et sur les cartes de la page d'accueil.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col justify-center rounded border border-ligne/40 bg-noir/40 p-3 text-xs text-gris">
+                      <p className="font-semibold text-blanc flex items-center gap-1.5">
+                        <span>✨</span>
+                        <span>Mode haute fidélité</span>
+                      </p>
+                      <p className="mt-1 text-[11px]">
+                        L'image s'affiche à 100% de ses dimensions naturelles sans aucun rognage, entourée d'un halo flouté reprenant ses couleurs.
+                      </p>
+                    </div>
+                  )}
+                </div>
 
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div className="sm:col-span-2 space-y-2">
@@ -2037,6 +2231,7 @@ export default function AdminPage() {
                   <tr>
                     <th className="p-3.5 font-bold uppercase tracking-wider">Article</th>
                     <th className="p-3.5 font-bold uppercase tracking-wider">Univers</th>
+                    <th className="p-3.5 font-bold uppercase tracking-wider">À la une</th>
                     <th className="p-3.5 font-bold uppercase tracking-wider">Date</th>
                     <th className="p-3.5 font-bold uppercase tracking-wider">Lecture</th>
                     <th className="p-3.5 text-right font-bold uppercase tracking-wider">Actions</th>
@@ -2078,6 +2273,37 @@ export default function AdminPage() {
                             </div>
                           )}
                         </td>
+                        <td className="p-3.5 whitespace-nowrap">
+                          <select
+                            value={art.format || "standard"}
+                            onChange={async (e) => {
+                              const nouveauFormat = e.target.value;
+                              try {
+                                const res = await fetch("/api/admin/articles", {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ slug: art.slug, format: nouveauFormat }),
+                                });
+                                if (res.ok) {
+                                  chargerArticles();
+                                }
+                              } catch {}
+                            }}
+                            className={`rounded border px-2 py-1 text-[11px] font-bold transition-colors focus:outline-none ${
+                              art.format === "une_1"
+                                ? "border-accent bg-accent/20 text-accent"
+                                : art.format === "une_2" || art.format === "une_3"
+                                  ? "border-nexus/60 bg-nexus/20 text-nexus"
+                                  : "border-ligne bg-noir text-gris hover:border-blanc/30 hover:text-blanc"
+                            }`}
+                            title="Assigner la position de cet article en page d'accueil"
+                          >
+                            <option value="standard">Standard (Auto)</option>
+                            <option value="une_1">⭐ Grande Une (#1)</option>
+                            <option value="une_2">⭐ Deuxième Une (#2)</option>
+                            <option value="une_3">⭐ Troisième Une (#3)</option>
+                          </select>
+                        </td>
                         <td className="p-3.5 text-gris whitespace-nowrap">
                           {new Date(art.publieLe).toLocaleDateString("fr-FR", {
                             day: "numeric",
@@ -2091,7 +2317,7 @@ export default function AdminPage() {
                         <td className="p-3.5 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-2">
                             <Link
-                              href={`/articles/${art.slug}`}
+                              href={`/${art.univers}/${art.slug}`}
                               target="_blank"
                               className="rounded border border-ligne bg-surface px-2.5 py-1 text-[0.6875rem] font-bold text-blanc hover:border-nexus hover:text-nexus transition-colors"
                               title="Voir l'article en ligne"

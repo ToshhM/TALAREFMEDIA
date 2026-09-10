@@ -209,3 +209,52 @@ export async function getTags(): Promise<{ slug: string; nom: string }[]> {
   }
   return [...map.entries()].map(([slug, nom]) => ({ slug, nom }));
 }
+
+/**
+ * Sélection des 3 articles « À la une » (Spécification v3.0 §11) :
+ * 1. Recherche manuelle :
+ *    - format === "une_1" -> Grande Une (#1)
+ *    - format === "une_2" -> 2ème Une (#2)
+ *    - format === "une_3" -> 3ème Une (#3)
+ * 2. Repli automatique par date :
+ *    - Si une position n'est pas assignée manuellement, elle est comblée
+ *      par les articles les plus récents (tri par publieLe décroissant).
+ */
+export async function getArticlesALaUne(): Promise<{
+  selection: Article[];
+  reste: Article[];
+}> {
+  const articles = await getArticles();
+  if (articles.length === 0) {
+    return { selection: [], reste: [] };
+  }
+
+  let une1 = articles.find((a) => a.format === "une_1");
+  let une2 = articles.find((a) => a.format === "une_2" && a.slug !== une1?.slug);
+  let une3 = articles.find(
+    (a) => a.format === "une_3" && a.slug !== une1?.slug && a.slug !== une2?.slug,
+  );
+
+  const pris = new Set<string>(
+    [une1?.slug, une2?.slug, une3?.slug].filter(Boolean) as string[],
+  );
+  const candidatsDate = articles.filter((a) => !pris.has(a.slug));
+
+  if (!une1 && candidatsDate.length > 0) {
+    une1 = candidatsDate.shift();
+    if (une1) pris.add(une1.slug);
+  }
+  if (!une2 && candidatsDate.length > 0) {
+    une2 = candidatsDate.shift();
+    if (une2) pris.add(une2.slug);
+  }
+  if (!une3 && candidatsDate.length > 0) {
+    une3 = candidatsDate.shift();
+    if (une3) pris.add(une3.slug);
+  }
+
+  const selection = [une1, une2, une3].filter(Boolean) as Article[];
+  const reste = articles.filter((a) => !pris.has(a.slug));
+
+  return { selection, reste };
+}

@@ -37,6 +37,7 @@ export function CarteArticle({
           <img
             src={article.imageDeUne.url}
             alt={article.imageDeUne.alt || article.titre}
+            style={{ objectPosition: article.imageDeUne?.cadrage || "center" }}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
             loading="lazy"
           />

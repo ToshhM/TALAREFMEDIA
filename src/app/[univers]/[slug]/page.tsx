@@ -222,24 +222,71 @@ export default async function PageArticle({
           </figure>
         ) : (
           <figure className="mb-10">
-            <div
-              className="relative aspect-video w-full overflow-hidden rounded-md bg-surface-2 border border-ligne"
-              role="img"
-              aria-label={article.imageDeUne.alt}
-            >
-              {article.imageDeUne.url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={article.imageDeUne.url}
-                  alt={article.imageDeUne.alt || article.titre}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="texture" aria-hidden="true" />
-              )}
-            </div>
-            <figcaption className="etiquette mt-2">
-              {article.imageDeUne.credit}
+            {(() => {
+              const disp = article.imageDeUne?.disposition || "standard";
+              const cadrage = article.imageDeUne?.cadrage || "center";
+              const altText = article.imageDeUne?.alt || article.titre;
+
+              if (disp === "adaptatif") {
+                return (
+                  <div
+                    className="relative w-full aspect-[4/5] sm:aspect-[4/3] md:aspect-[16/10] max-h-[75vh] overflow-hidden rounded-md bg-surface-2 border border-ligne flex items-center justify-center"
+                    role="img"
+                    aria-label={altText}
+                  >
+                    {article.imageDeUne?.url ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={article.imageDeUne.url}
+                          alt=""
+                          aria-hidden="true"
+                          className="absolute inset-0 h-full w-full object-cover blur-2xl opacity-35 scale-110 pointer-events-none select-none transition-opacity duration-300"
+                        />
+                        <div className="absolute inset-0 bg-noir/40 backdrop-blur-[1px]" aria-hidden="true" />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={article.imageDeUne.url}
+                          alt={altText}
+                          className="relative z-10 max-h-full max-w-full object-contain p-1 sm:p-2 drop-shadow-md select-none"
+                        />
+                      </>
+                    ) : (
+                      <div className="texture" aria-hidden="true" />
+                    )}
+                  </div>
+                );
+              }
+
+              let containerClass = "aspect-video w-full";
+              if (disp === "portrait") {
+                containerClass = "aspect-[3/4] max-w-md mx-auto";
+              } else if (disp === "carre") {
+                containerClass = "aspect-square max-w-lg mx-auto";
+              }
+
+              return (
+                <div
+                  className={`relative overflow-hidden rounded-md bg-surface-2 border border-ligne ${containerClass}`}
+                  role="img"
+                  aria-label={altText}
+                >
+                  {article.imageDeUne?.url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={article.imageDeUne.url}
+                      alt={altText}
+                      style={{ objectPosition: cadrage }}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="texture" aria-hidden="true" />
+                  )}
+                </div>
+              );
+            })()}
+            <figcaption className="etiquette mt-2 text-center sm:text-left">
+              {article.imageDeUne?.credit || "Talaref Media"}
             </figcaption>
           </figure>
         )}

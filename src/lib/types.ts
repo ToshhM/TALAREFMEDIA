@@ -24,6 +24,10 @@ export type TypeBloc =
   | "aLireAussi"
   | "separateur";
 
+export type ImageDisposition = "standard" | "large" | "portrait" | "carre" | "adaptatif";
+export type ImageCadrage = "center" | "top" | "bottom";
+export type PositionALaUne = "une_1" | "une_2" | "une_3" | "standard";
+
 export type Image = {
   url: string;
   alt: string;
@@ -32,7 +36,8 @@ export type Image = {
   legende?: string;
   largeur?: number;
   hauteur?: number;
-  disposition?: "standard" | "large" | "portrait" | "carre";
+  disposition?: ImageDisposition;
+  cadrage?: ImageCadrage;
 };
 
 export type Bloc =

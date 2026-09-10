@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getArticles } from "@/lib/content";
+import { getArticlesALaUne } from "@/lib/content";
 import { UNIVERS, getCollectionsForUnivers } from "@/lib/univers";
 import { CarteArticle } from "@/components/carte-article";
 
@@ -13,8 +13,8 @@ export const revalidate = 0;
  * visuels, et les dernières publications. Le fond reste strictement noir.
  */
 export default async function Home() {
-  const articles = await getArticles();
-  const [une, ...suite] = articles;
+  const { selection, reste } = await getArticlesALaUne();
+  const [une, ...secondaires] = selection;
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
@@ -26,7 +26,7 @@ export default async function Home() {
           <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
             <CarteArticle article={une} taille="une" />
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
-              {suite.slice(0, 2).map((a) => (
+              {secondaires.map((a) => (
                 <CarteArticle key={a.slug} article={a} />
               ))}
             </div>
@@ -78,13 +78,13 @@ export default async function Home() {
         </ul>
       </section>
 
-      {suite.length > 2 ? (
+      {reste.length > 0 ? (
         <section aria-labelledby="derniers">
           <h2 id="derniers" className="etiquette mb-4">
             Les derniers articles
           </h2>
           <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {suite.slice(2).map((a) => (
+            {reste.map((a) => (
               <li key={a.slug}>
                 <CarteArticle article={a} />
               </li>
