@@ -38,6 +38,7 @@ export type Image = {
   hauteur?: number;
   disposition?: ImageDisposition;
   cadrage?: ImageCadrage;
+  zoom?: number;
 };
 
 export type Bloc =

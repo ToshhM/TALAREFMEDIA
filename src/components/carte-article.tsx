@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Article } from "@/lib/types";
 import { formaterRef, getCollection, getUnivers } from "@/lib/univers";
-import { formaterDate, formaterDuree, formaterObjectPosition } from "@/lib/site";
+import { formaterDate, formaterDuree, formaterImageTransform, formaterObjectPosition } from "@/lib/site";
 import { PastilleCode } from "./pastille-code";
 
 /**
@@ -50,6 +50,10 @@ export function CarteArticle({
               <img
                 src={article.imageDeUne.url}
                 alt={article.imageDeUne.alt || article.titre}
+                style={{
+                  objectPosition: formaterObjectPosition(article.imageDeUne.cadrage),
+                  transform: formaterImageTransform(article.imageDeUne.zoom, article.imageDeUne.cadrage, true),
+                }}
                 className="relative z-10 max-h-full max-w-full object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-[1.03]"
                 loading="lazy"
               />
@@ -59,7 +63,10 @@ export function CarteArticle({
             <img
               src={article.imageDeUne.url}
               alt={article.imageDeUne.alt || article.titre}
-              style={{ objectPosition: formaterObjectPosition(article.imageDeUne?.cadrage) }}
+              style={{
+                objectPosition: formaterObjectPosition(article.imageDeUne?.cadrage),
+                transform: formaterImageTransform(article.imageDeUne?.zoom, article.imageDeUne?.cadrage, false),
+              }}
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
               loading="lazy"
             />

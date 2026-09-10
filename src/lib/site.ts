@@ -58,3 +58,24 @@ export function formaterObjectPosition(cadrage?: string): string {
   }
   return cadrage;
 }
+
+/**
+ * Calcule le style CSS `transform` pour le zoom / redimensionnement et décalage adaptatif.
+ */
+export function formaterImageTransform(zoom?: number, cadrage?: string, estAdaptatif?: boolean): string | undefined {
+  const z = typeof zoom === "number" && !isNaN(zoom) ? zoom : 1;
+  const parts: string[] = [];
+  if (z !== 1) {
+    parts.push(`scale(${z})`);
+  }
+  if (estAdaptatif && cadrage) {
+    const match = cadrage.match(/^(\d{1,3})%?$/);
+    const pct = match ? parseInt(match[1], 10) : (cadrage === "top" ? 0 : cadrage === "bottom" ? 100 : 50);
+    // Décalage vertical doux : de -20% à +20%
+    const shift = (pct - 50) * 0.4;
+    if (Math.abs(shift) > 0.5) {
+      parts.push(`translateY(${shift.toFixed(1)}%)`);
+    }
+  }
+  return parts.length > 0 ? parts.join(" ") : undefined;
+}

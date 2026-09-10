@@ -12,7 +12,7 @@ import { parserSourceVideo } from "@/lib/video-utils";
 import { FacadeVideo } from "@/components/facade-video";
 import { slugifier } from "@/lib/reserved";
 import { EditeurTexteRiche } from "@/components/editeur-texte-riche";
-import { formaterObjectPosition } from "@/lib/site";
+import { formaterImageTransform, formaterObjectPosition } from "@/lib/site";
 
 function parseCadragePourcentage(cadrage: string): number {
   if (cadrage === "top") return 0;
@@ -523,6 +523,7 @@ export default function AdminPage() {
   const [imageAlt, setImageAlt] = useState("");
   const [imageDisposition, setImageDisposition] = useState<ImageDisposition>("standard");
   const [imageCadrage, setImageCadrage] = useState<ImageCadrage>("center");
+  const [imageZoom, setImageZoom] = useState<number>(1);
   const [positionALaUne, setPositionALaUne] = useState<PositionALaUne>("standard");
   const [uploadEnCoursUne, setUploadEnCoursUne] = useState(false);
   const [videoPrincipaleUrl, setVideoPrincipaleUrl] = useState("");
@@ -571,6 +572,7 @@ export default function AdminPage() {
       if (typeof data.imageAlt === "string") setImageAlt(data.imageAlt);
       if (data.imageDisposition) setImageDisposition(data.imageDisposition);
       if (data.imageCadrage) setImageCadrage(data.imageCadrage);
+      if (typeof data.imageZoom === "number") setImageZoom(data.imageZoom);
       if (data.positionALaUne) setPositionALaUne(data.positionALaUne);
       if (typeof data.tagsRaw === "string") setTagsRaw(data.tagsRaw);
       if (typeof data.datePublication === "string") setDatePublication(data.datePublication);
@@ -657,6 +659,7 @@ export default function AdminPage() {
           imageAlt,
           imageDisposition,
           imageCadrage,
+          imageZoom,
           positionALaUne,
           tagsRaw,
           datePublication,
@@ -696,6 +699,7 @@ export default function AdminPage() {
     imageAlt,
     imageDisposition,
     imageCadrage,
+    imageZoom,
     positionALaUne,
     tagsRaw,
     datePublication,
@@ -811,6 +815,7 @@ export default function AdminPage() {
     setImageAlt(art.imageDeUne?.alt || "");
     setImageDisposition(art.imageDeUne?.disposition || "standard");
     setImageCadrage(art.imageDeUne?.cadrage || "center");
+    setImageZoom(art.imageDeUne?.zoom || 1);
     setPositionALaUne((art.format as PositionALaUne) || "standard");
     setVideoPrincipaleUrl(art.video?.youtubeId || (art.video as any)?.url || "");
     setVideoPrincipaleTitre(art.video?.titre || "");
@@ -877,6 +882,7 @@ export default function AdminPage() {
     setImageUrl("");
     setImageDisposition("standard");
     setImageCadrage("center");
+    setImageZoom(1);
     setPositionALaUne("standard");
     setVideoPrincipaleUrl("");
     setVideoPrincipaleTitre("");
@@ -1108,6 +1114,7 @@ export default function AdminPage() {
           imageAlt,
           imageDisposition,
           imageCadrage,
+          imageZoom,
           format: positionALaUne,
           positionALaUne,
           tagsRaw,
@@ -1690,9 +1697,7 @@ export default function AdminPage() {
                             <span>🏠</span> Aperçu Carte Accueil (16:9)
                           </span>
                           <span className="text-[10px] text-accent font-mono font-bold">
-                            {imageDisposition === "adaptatif"
-                              ? "✨ Mode Adaptatif"
-                              : `Cadrage : ${parseCadragePourcentage(imageCadrage)}%`}
+                            {imageDisposition === "adaptatif" ? "✨ Mode Adaptatif" : "Format 16:9"} · Zoom: {Math.round(imageZoom * 100)}% · Pos: {parseCadragePourcentage(imageCadrage)}%
                           </span>
                         </div>
                         <div className="relative aspect-video w-full overflow-hidden rounded-md border border-ligne bg-surface-2 shadow-inner">
@@ -1710,7 +1715,11 @@ export default function AdminPage() {
                               <img
                                 src={imageUrl}
                                 alt="Aperçu Accueil"
-                                className="relative z-10 max-h-full max-w-full object-contain drop-shadow-md"
+                                style={{
+                                  objectPosition: formaterObjectPosition(imageCadrage),
+                                  transform: formaterImageTransform(imageZoom, imageCadrage, true),
+                                }}
+                                className="relative z-10 max-h-full max-w-full object-contain drop-shadow-md transition-transform duration-150 ease-out"
                               />
                             </div>
                           ) : (
@@ -1718,8 +1727,11 @@ export default function AdminPage() {
                             <img
                               src={imageUrl}
                               alt="Aperçu Accueil"
-                              style={{ objectPosition: formaterObjectPosition(imageCadrage) }}
-                              className="h-full w-full object-cover transition-[object-position] duration-150 ease-out"
+                              style={{
+                                objectPosition: formaterObjectPosition(imageCadrage),
+                                transform: formaterImageTransform(imageZoom, imageCadrage, false),
+                              }}
+                              className="h-full w-full object-cover transition-all duration-150 ease-out"
                             />
                           )}
                           <div className="absolute bottom-1.5 left-2 z-20 rounded bg-noir/85 px-2 py-0.5 font-mono text-[9px] text-blanc border border-blanc/10">
@@ -1735,10 +1747,10 @@ export default function AdminPage() {
                             <span>📄</span> Aperçu Page Article
                           </span>
                           <span className="text-[10px] text-nexus font-mono font-bold">
-                            {imageDisposition === "standard" && "16:9 Paysage"}
+                            {imageDisposition === "standard" && "16:9 Paysage (Plein cadre)"}
                             {imageDisposition === "portrait" && "3:4 Portrait"}
                             {imageDisposition === "carre" && "1:1 Carré"}
-                            {imageDisposition === "adaptatif" && "Photo entière"}
+                            {imageDisposition === "adaptatif" && "Adaptatif (Entier)"}
                           </span>
                         </div>
                         <div className="relative aspect-video w-full overflow-hidden rounded-md border border-ligne bg-surface-2 flex items-center justify-center">
@@ -1756,7 +1768,11 @@ export default function AdminPage() {
                               <img
                                 src={imageUrl}
                                 alt="Aperçu Article"
-                                className="relative z-10 max-h-full max-w-full object-contain drop-shadow-md"
+                                style={{
+                                  objectPosition: formaterObjectPosition(imageCadrage),
+                                  transform: formaterImageTransform(imageZoom, imageCadrage, true),
+                                }}
+                                className="relative z-10 max-h-full max-w-full object-contain drop-shadow-md transition-transform duration-150 ease-out"
                               />
                             </div>
                           ) : (
@@ -1773,8 +1789,11 @@ export default function AdminPage() {
                               <img
                                 src={imageUrl}
                                 alt={imageAlt || "Aperçu Article"}
-                                style={{ objectPosition: formaterObjectPosition(imageCadrage) }}
-                                className="h-full w-full object-cover transition-[object-position] duration-150 ease-out"
+                                style={{
+                                  objectPosition: formaterObjectPosition(imageCadrage),
+                                  transform: formaterImageTransform(imageZoom, imageCadrage, false),
+                                }}
+                                className="h-full w-full object-cover transition-all duration-150 ease-out"
                               />
                             </div>
                           )}
@@ -1787,87 +1806,159 @@ export default function AdminPage() {
                   </div>
                 ) : null}
 
-                {/* Commandes d'orientation et de cadrage focal */}
+                {/* Commandes d'orientation, de zoom et de cadrage focal */}
                 <div className="mb-5 space-y-4 rounded-md border border-ligne/60 bg-surface/60 p-4">
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-blanc mb-2">
-                      1. Format & Présentation de la photo
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-blanc">
+                        1. Présentation de la photo dans le cadre
+                      </label>
+                      <span className="text-[10px] text-gris font-mono">
+                        {imageDisposition === "standard"
+                          ? "✓ Mode plein cadre (remplit tout le 16:9)"
+                          : imageDisposition === "adaptatif"
+                            ? "✓ Mode photo entière (avec flou sur les côtés)"
+                            : "✓ Mode " + imageDisposition}
+                      </span>
+                    </div>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       <button
                         type="button"
                         onClick={() => setImageDisposition("standard")}
-                        className={`flex items-center justify-center gap-1.5 rounded px-2.5 py-2 text-xs font-semibold transition-all ${
+                        className={`flex flex-col items-center justify-center gap-1 rounded p-2.5 text-xs transition-all ${
                           imageDisposition === "standard"
-                            ? "bg-accent text-noir font-bold shadow"
+                            ? "bg-accent text-noir font-bold shadow ring-2 ring-accent/40"
                             : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
                         }`}
                       >
-                        <span>🏞️</span>
-                        <span>Paysage (16:9)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setImageDisposition("portrait")}
-                        className={`flex items-center justify-center gap-1.5 rounded px-2.5 py-2 text-xs font-semibold transition-all ${
-                          imageDisposition === "portrait"
-                            ? "bg-accent text-noir font-bold shadow"
-                            : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
-                        }`}
-                      >
-                        <span>📱</span>
-                        <span>Portrait (3:4)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setImageDisposition("carre")}
-                        className={`flex items-center justify-center gap-1.5 rounded px-2.5 py-2 text-xs font-semibold transition-all ${
-                          imageDisposition === "carre"
-                            ? "bg-accent text-noir font-bold shadow"
-                            : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
-                        }`}
-                      >
-                        <span>⬛</span>
-                        <span>Carré (1:1)</span>
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <span>🏞️</span>
+                          <span>Paysage (16:9)</span>
+                        </div>
+                        <span className="text-[9px] opacity-80">Remplir tout le cadre</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => setImageDisposition("adaptatif")}
-                        className={`flex items-center justify-center gap-1.5 rounded px-2.5 py-2 text-xs font-semibold transition-all ${
+                        className={`flex flex-col items-center justify-center gap-1 rounded p-2.5 text-xs transition-all ${
                           imageDisposition === "adaptatif"
-                            ? "bg-accent text-noir font-bold shadow ring-2 ring-accent/30"
+                            ? "bg-accent text-noir font-bold shadow ring-2 ring-accent/40"
                             : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
                         }`}
-                        title="Photo entière sans rognage avec flou d'ambiance sur l'accueil et l'article"
+                        title="Affiche toute la hauteur de la photo au centre sans couper, avec flou d'ambiance sur les côtés"
                       >
-                        <span>✨</span>
-                        <span>Photo entière (Adaptatif)</span>
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <span>✨</span>
+                          <span>Photo entière</span>
+                        </div>
+                        <span className="text-[9px] opacity-80">Adaptatif (Flou côtés)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImageDisposition("portrait")}
+                        className={`flex flex-col items-center justify-center gap-1 rounded p-2.5 text-xs transition-all ${
+                          imageDisposition === "portrait"
+                            ? "bg-accent text-noir font-bold shadow ring-2 ring-accent/40"
+                            : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <span>📱</span>
+                          <span>Portrait (3:4)</span>
+                        </div>
+                        <span className="text-[9px] opacity-80">Format vertical mode</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImageDisposition("carre")}
+                        className={`flex flex-col items-center justify-center gap-1 rounded p-2.5 text-xs transition-all ${
+                          imageDisposition === "carre"
+                            ? "bg-accent text-noir font-bold shadow ring-2 ring-accent/40"
+                            : "border border-ligne bg-noir text-gris hover:text-blanc hover:border-blanc/30"
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <span>⬛</span>
+                          <span>Carré (1:1)</span>
+                        </div>
+                        <span className="text-[9px] opacity-80">Format carré</span>
                       </button>
                     </div>
                   </div>
 
-                  {/* Curseur de recadrage interactif */}
+                  {/* Curseur de Redimensionnement / Zoom */}
                   <div className="pt-3 border-t border-ligne/50">
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-[11px] font-bold uppercase tracking-wider text-blanc flex items-center gap-1.5">
-                        <span>🎚️</span> 2. Curseur de recadrage vertical
+                        <span>🔍</span> 2. Redimensionner & Zoomer l&apos;image
+                      </label>
+                      <span className="font-mono text-xs font-bold text-accent bg-accent/15 px-2.5 py-0.5 rounded border border-accent/30">
+                        Échelle : {Math.round(imageZoom * 100)}%
+                      </span>
+                    </div>
+                    <div className="space-y-2.5">
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-mono text-gris min-w-[50px]">70% (Dézoom)</span>
+                        <input
+                          type="range"
+                          min="0.7"
+                          max="2.0"
+                          step="0.05"
+                          value={imageZoom}
+                          onChange={(e) => setImageZoom(parseFloat(e.target.value))}
+                          className="w-full h-2 rounded-lg bg-surface-2 border border-ligne accent-accent cursor-pointer"
+                        />
+                        <span className="text-[10px] font-mono text-gris text-right min-w-[50px]">200% (Zoom max)</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+                        {[
+                          { val: 0.8, label: "80% Réduit" },
+                          { val: 1.0, label: "100% Normal" },
+                          { val: 1.25, label: "125% Agrandir" },
+                          { val: 1.5, label: "150% Zoom" },
+                          { val: 1.8, label: "180% Rapproché" },
+                        ].map((z) => {
+                          const actif = Math.abs(imageZoom - z.val) < 0.03;
+                          return (
+                            <button
+                              key={z.val}
+                              type="button"
+                              onClick={() => setImageZoom(z.val)}
+                              className={`rounded border px-2 py-1.5 text-xs font-semibold transition-all ${
+                                actif
+                                  ? "border-accent bg-accent text-noir font-bold shadow"
+                                  : "border-ligne bg-noir text-gris hover:border-blanc/30 hover:text-blanc"
+                              }`}
+                            >
+                              {z.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Curseur de recadrage vertical */}
+                  <div className="pt-3 border-t border-ligne/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-blanc flex items-center gap-1.5">
+                        <span>🎚️</span> 3. Recadrage vertical (Hauteur / Sujet)
                       </label>
                       <span className="font-mono text-xs font-bold text-nexus bg-nexus/15 px-2.5 py-0.5 rounded border border-nexus/30">
                         {parseCadragePourcentage(imageCadrage)}% —{" "}
                         {parseCadragePourcentage(imageCadrage) <= 15
                           ? "Haut (Ciel / Tête)"
                           : parseCadragePourcentage(imageCadrage) <= 35
-                            ? "Visage / Lunettes"
+                            ? "Visage / Regard"
                             : parseCadragePourcentage(imageCadrage) <= 65
                               ? "Centre"
                               : parseCadragePourcentage(imageCadrage) <= 85
                                 ? "Buste / Tenue"
-                                : "Bas / Voiture"}
+                                : "Bas / Voiture / Sol"}
                       </span>
                     </div>
 
-                    {/* Le slider / curseur */}
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                       <div className="flex items-center gap-3">
                         <span className="text-[10px] font-mono text-gris min-w-[50px]">0% (Haut)</span>
                         <input
@@ -1882,7 +1973,6 @@ export default function AdminPage() {
                         <span className="text-[10px] font-mono text-gris text-right min-w-[50px]">100% (Bas)</span>
                       </div>
 
-                      {/* Raccourcis rapides à 1 clic */}
                       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
                         {[
                           { val: "0%", pct: 0, label: "⬆️ 0% Haut" },
@@ -1909,10 +1999,8 @@ export default function AdminPage() {
                         })}
                       </div>
 
-                      <p className="text-[11px] text-gris/80">
-                        {imageDisposition === "adaptatif"
-                          ? "💡 En mode « Photo entière », la photo verticale apparaît déjà à 100% sans rognage sur la carte d'accueil et sur l'article. Le curseur reste actif si vous basculez sur un format standard."
-                          : "💡 Glissez le curseur pour caler le cadrage exact (ex: sur les yeux de la mannequin ou sur la voiture). Regardez l'aperçu « Carte Accueil (16:9) » au-dessus pour ajuster au millimètre près !"}
+                      <p className="text-[11px] text-gris/80 pt-1">
+                        💡 <strong>Astuce :</strong> Ajustez la taille avec le curseur de zoom et la hauteur avec le curseur de recadrage. L&apos;aperçu « Carte Accueil (16:9) » au-dessus réagit instantanément !
                       </p>
                     </div>
                   </div>

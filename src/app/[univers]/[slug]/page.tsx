@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { getALireAussi, getArticle, getArticles } from "@/lib/content";
 import { formaterRef, getCollection, getUnivers } from "@/lib/univers";
-import { SITE, dureeISO, formaterDate, formaterDuree, formaterObjectPosition, urlAbsolue } from "@/lib/site";
+import { SITE, dureeISO, formaterDate, formaterDuree, formaterImageTransform, formaterObjectPosition, urlAbsolue } from "@/lib/site";
 import { RenduBlocs } from "@/components/blocs";
 import { BarreProgression } from "@/components/barre-progression";
 import { PastilleCode } from "@/components/pastille-code";
@@ -248,7 +248,11 @@ export default async function PageArticle({
                         <img
                           src={article.imageDeUne.url}
                           alt={altText}
-                          className="relative z-10 max-h-full max-w-full object-contain p-1 sm:p-2 drop-shadow-md select-none"
+                          style={{
+                            objectPosition: formaterObjectPosition(cadrage),
+                            transform: formaterImageTransform(article.imageDeUne?.zoom, cadrage, true),
+                          }}
+                          className="relative z-10 max-h-full max-w-full object-contain p-1 sm:p-2 drop-shadow-md select-none transition-transform duration-200"
                         />
                       </>
                     ) : (
@@ -276,8 +280,11 @@ export default async function PageArticle({
                     <img
                       src={article.imageDeUne.url}
                       alt={altText}
-                      style={{ objectPosition: formaterObjectPosition(cadrage) }}
-                      className="h-full w-full object-cover"
+                      style={{
+                        objectPosition: formaterObjectPosition(cadrage),
+                        transform: formaterImageTransform(article.imageDeUne?.zoom, cadrage, false),
+                      }}
+                      className="h-full w-full object-cover transition-transform duration-200"
                     />
                   ) : (
                     <div className="texture" aria-hidden="true" />

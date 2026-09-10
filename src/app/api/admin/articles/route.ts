@@ -29,6 +29,7 @@ export async function POST(request: Request) {
       imageCredit,
       imageDisposition,
       imageCadrage,
+      imageZoom,
       format,
       positionALaUne,
       tagsRaw,
@@ -158,6 +159,7 @@ export async function POST(request: Request) {
         credit: imageCredit?.trim() || "Talaref Media",
         disposition: imageDisposition || "standard",
         cadrage: imageCadrage || "center",
+        zoom: typeof imageZoom === "number" ? imageZoom : undefined,
       },
       univers: univers as UniverseSlug,
       universSecondaires: Array.isArray(universSecondaires)
@@ -264,6 +266,7 @@ export async function PUT(request: Request) {
       imageCredit,
       imageDisposition,
       imageCadrage,
+      imageZoom,
       format,
       positionALaUne,
       tagsRaw,
@@ -328,6 +331,7 @@ export async function PUT(request: Request) {
         credit: imageCredit?.trim() || "Talaref Media",
         disposition: imageDisposition || existant?.imageDeUne?.disposition || "standard",
         cadrage: imageCadrage || existant?.imageDeUne?.cadrage || "center",
+        zoom: typeof imageZoom === "number" ? imageZoom : existant?.imageDeUne?.zoom,
       },
       univers: univers as UniverseSlug,
       universSecondaires: Array.isArray(universSecondaires)
