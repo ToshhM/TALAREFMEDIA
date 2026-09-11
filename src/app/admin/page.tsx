@@ -46,6 +46,7 @@ type FormBloc = {
   legende?: string;
   youtubeId?: string;
   duree?: number;
+  miniature?: string;
   disposition?: "standard" | "large" | "portrait" | "carre";
   layout?: "carrousel" | "grille-2" | "grille-3" | "mosaique";
   images?: Array<{ url: string; alt?: string; credit?: string; legende?: string }>;
@@ -240,6 +241,10 @@ function BlocVideoEditor({
   modifierBloc: (index: number, champ: string, valeur: any) => void;
 }) {
   const [enCours, setEnCours] = useState(false);
+  const [enCoursMiniature, setEnCoursMiniature] = useState(false);
+
+  const parsed = parserSourceVideo(bloc.youtubeId || "");
+  const idYouTube = parsed.type === "youtube" ? parsed.valeur : null;
 
   return (
     <div className="space-y-3">
@@ -285,6 +290,73 @@ function BlocVideoEditor({
         />
       </div>
 
+      {/* Gestion de la miniature de la vidéo */}
+      <div className="rounded border border-ligne/70 bg-surface-2/40 p-2.5 space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-mono text-[0.6875rem] uppercase font-bold text-gris tracking-wide">
+            🖼️ Miniature de la vidéo
+          </span>
+          <div className="flex items-center gap-2">
+            {idYouTube && (
+              <button
+                type="button"
+                onClick={() => {
+                  modifierBloc(index, "miniature", `https://i.ytimg.com/vi/${idYouTube}/hqdefault.jpg`);
+                }}
+                className="text-[0.6875rem] font-bold text-nexus hover:underline"
+              >
+                ✨ Récupérer miniature YouTube
+              </button>
+            )}
+            {bloc.miniature && (
+              <button
+                type="button"
+                onClick={() => modifierBloc(index, "miniature", "")}
+                className="text-[0.6875rem] text-encre hover:underline"
+              >
+                ✕ Rétablir automatique
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2 items-center">
+          <input
+            type="text"
+            value={bloc.miniature || ""}
+            onChange={(e) => modifierBloc(index, "miniature", e.target.value)}
+            placeholder={
+              idYouTube
+                ? "Automatique (miniature YouTube officielle) ou collez une URL personnalisée..."
+                : "URL de la miniature personnalisée (ou uploadez un fichier image)..."
+            }
+            className="w-full rounded border border-ligne bg-noir p-2 text-xs text-blanc focus:border-nexus focus:outline-none"
+          />
+          <label className="shrink-0 cursor-pointer rounded border border-ligne bg-surface-2 px-3 py-2 text-xs font-bold text-blanc hover:bg-ligne flex items-center gap-1">
+            {enCoursMiniature ? "Upload..." : "📁 Uploader miniature"}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={enCoursMiniature}
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                setEnCoursMiniature(true);
+                try {
+                  const url = await televerserFichier(f);
+                  modifierBloc(index, "miniature", url);
+                } catch (err: any) {
+                  alert(err.message || "Erreur upload image");
+                } finally {
+                  setEnCoursMiniature(false);
+                }
+              }}
+            />
+          </label>
+        </div>
+      </div>
+
       {bloc.youtubeId ? (
         <div className="mt-3">
           <p className="mb-1.5 font-mono text-[0.625rem] uppercase text-gris">
@@ -294,6 +366,7 @@ function BlocVideoEditor({
             <FacadeVideo
               youtubeId={bloc.youtubeId}
               titre={bloc.titre || "Aperçu vidéo"}
+              miniature={bloc.miniature}
             />
           </div>
         </div>
@@ -528,6 +601,8 @@ export default function AdminPage() {
   const [uploadEnCoursUne, setUploadEnCoursUne] = useState(false);
   const [videoPrincipaleUrl, setVideoPrincipaleUrl] = useState("");
   const [videoPrincipaleTitre, setVideoPrincipaleTitre] = useState("");
+  const [videoPrincipaleMiniature, setVideoPrincipaleMiniature] = useState("");
+  const [uploadEnCoursMiniaturePrincipale, setUploadEnCoursMiniaturePrincipale] = useState(false);
   const [tagsRaw, setTagsRaw] = useState("");
   const [datePublication, setDatePublication] = useState("");
   const [numeroRef, setNumeroRef] = useState<number | string>("");
@@ -582,6 +657,7 @@ export default function AdminPage() {
       if (typeof data.metaDescription === "string") setMetaDescription(data.metaDescription);
       if (typeof data.videoPrincipaleUrl === "string") setVideoPrincipaleUrl(data.videoPrincipaleUrl);
       if (typeof data.videoPrincipaleTitre === "string") setVideoPrincipaleTitre(data.videoPrincipaleTitre);
+      if (typeof data.videoPrincipaleMiniature === "string") setVideoPrincipaleMiniature(data.videoPrincipaleMiniature);
       if (Array.isArray(data.blocs) && data.blocs.length > 0) setBlocs(data.blocs);
       if (data.modeEdition && typeof data.modeEdition === "object") setModeEdition(data.modeEdition);
       setBrouillonDisponible(false);
@@ -670,6 +746,7 @@ export default function AdminPage() {
           blocs,
           videoPrincipaleUrl,
           videoPrincipaleTitre,
+          videoPrincipaleMiniature,
           modeEdition,
           savedAt: new Date().toISOString(),
         };
@@ -710,6 +787,7 @@ export default function AdminPage() {
     blocs,
     videoPrincipaleUrl,
     videoPrincipaleTitre,
+    videoPrincipaleMiniature,
     modeEdition,
     initialiseDepuisBrouillon,
   ]);
@@ -819,6 +897,7 @@ export default function AdminPage() {
     setPositionALaUne((art.format as PositionALaUne) || "standard");
     setVideoPrincipaleUrl(art.video?.youtubeId || (art.video as any)?.url || "");
     setVideoPrincipaleTitre(art.video?.titre || "");
+    setVideoPrincipaleMiniature((art.video as any)?.miniature || "");
     setTagsRaw(art.tags?.map((t) => t.nom).join(", ") || "");
     setUniversSecondaires(art.universSecondaires || []);
     setMetaTitre(art.metaTitre || "");
@@ -854,6 +933,7 @@ export default function AdminPage() {
           youtubeId: b.video?.youtubeId,
           titre: b.video?.titre,
           duree: b.video?.duree,
+          miniature: (b.video as any)?.miniature,
         };
       }
       if (b._type === "galerie") {
@@ -886,6 +966,7 @@ export default function AdminPage() {
     setPositionALaUne("standard");
     setVideoPrincipaleUrl("");
     setVideoPrincipaleTitre("");
+    setVideoPrincipaleMiniature("");
     setTagsRaw("");
     setDatePublication("");
     setUniversSecondaires([]);
@@ -1065,6 +1146,7 @@ export default function AdminPage() {
                   titre: b.titre || "Vidéo du sujet",
                   duree: b.duree || 0,
                   misEnLigneLe: new Date().toISOString().split("T")[0],
+                  miniature: b.miniature?.trim() || undefined,
                 },
               };
             }
@@ -1091,6 +1173,7 @@ export default function AdminPage() {
               titre: videoPrincipaleTitre.trim() || titre.trim(),
               duree: 0,
               misEnLigneLe: new Date().toISOString().split("T")[0],
+              miniature: videoPrincipaleMiniature.trim() || undefined,
             }
           : undefined;
 
@@ -2072,15 +2155,19 @@ export default function AdminPage() {
               </div>
 
               {/* Vidéo principale de l'article (optionnel) */}
-              <div className="mb-10 rounded-lg border border-ligne/70 bg-noir/40 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-gris">
-                    Vidéo principale de l'article (YouTube, Vimeo ou vidéo directe)
+              <div className="mb-10 rounded-lg border border-ligne/70 bg-noir/40 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-gris flex items-center gap-1.5">
+                    🎬 Vidéo principale de l'article (YouTube, Vimeo ou vidéo directe)
                   </span>
                   {videoPrincipaleUrl && (
                     <button
                       type="button"
-                      onClick={() => setVideoPrincipaleUrl("")}
+                      onClick={() => {
+                        setVideoPrincipaleUrl("");
+                        setVideoPrincipaleTitre("");
+                        setVideoPrincipaleMiniature("");
+                      }}
                       className="text-xs text-encre hover:underline"
                     >
                       ✕ Retirer la vidéo
@@ -2103,6 +2190,93 @@ export default function AdminPage() {
                     className="rounded border border-ligne bg-noir p-2 text-xs text-blanc focus:border-nexus focus:outline-none"
                   />
                 </div>
+
+                {/* Miniature de la vidéo principale */}
+                {videoPrincipaleUrl && (() => {
+                  const parsedMain = parserSourceVideo(videoPrincipaleUrl);
+                  const idMainYouTube = parsedMain.type === "youtube" ? parsedMain.valeur : null;
+
+                  return (
+                    <div className="space-y-3 pt-2 border-t border-ligne/40">
+                      <div className="rounded border border-ligne/70 bg-surface-2/40 p-2.5 space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-mono text-[0.6875rem] uppercase font-bold text-gris tracking-wide">
+                            🖼️ Miniature de la vidéo principale
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {idMainYouTube && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setVideoPrincipaleMiniature(`https://i.ytimg.com/vi/${idMainYouTube}/hqdefault.jpg`);
+                                }}
+                                className="text-[0.6875rem] font-bold text-nexus hover:underline"
+                              >
+                                ✨ Récupérer miniature YouTube
+                              </button>
+                            )}
+                            {videoPrincipaleMiniature && (
+                              <button
+                                type="button"
+                                onClick={() => setVideoPrincipaleMiniature("")}
+                                className="text-[0.6875rem] text-encre hover:underline"
+                              >
+                                ✕ Rétablir automatique
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-2 items-center">
+                          <input
+                            type="text"
+                            value={videoPrincipaleMiniature}
+                            onChange={(e) => setVideoPrincipaleMiniature(e.target.value)}
+                            placeholder={
+                              idMainYouTube
+                                ? "Automatique (miniature YouTube officielle) ou collez une URL personnalisée..."
+                                : "URL de la miniature personnalisée (ou uploadez un fichier image)..."
+                            }
+                            className="w-full rounded border border-ligne bg-noir p-2 text-xs text-blanc focus:border-nexus focus:outline-none"
+                          />
+                          <label className="shrink-0 cursor-pointer rounded border border-ligne bg-surface-2 px-3 py-2 text-xs font-bold text-blanc hover:bg-ligne flex items-center gap-1">
+                            {uploadEnCoursMiniaturePrincipale ? "Upload..." : "📁 Uploader miniature"}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              disabled={uploadEnCoursMiniaturePrincipale}
+                              onChange={async (e) => {
+                                const f = e.target.files?.[0];
+                                if (!f) return;
+                                setUploadEnCoursMiniaturePrincipale(true);
+                                try {
+                                  const url = await televerserFichier(f);
+                                  setVideoPrincipaleMiniature(url);
+                                } catch (err: any) {
+                                  alert(err.message || "Erreur upload image");
+                                } finally {
+                                  setUploadEnCoursMiniaturePrincipale(false);
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="max-w-md">
+                        <p className="mb-1.5 font-mono text-[0.625rem] uppercase text-gris">
+                          Aperçu de la vidéo principale :
+                        </p>
+                        <FacadeVideo
+                          youtubeId={videoPrincipaleUrl}
+                          titre={videoPrincipaleTitre || "Aperçu vidéo"}
+                          miniature={videoPrincipaleMiniature}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Blocs du corps d'article */}

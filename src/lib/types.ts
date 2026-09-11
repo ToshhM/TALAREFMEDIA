@@ -79,6 +79,7 @@ export type Video = {
   /** Durée en secondes, pour le VideoObject de Schema.org. */
   duree: number;
   misEnLigneLe: string;
+  miniature?: string;
 };
 
 export type Personne = {

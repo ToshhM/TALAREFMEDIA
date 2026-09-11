@@ -111,8 +111,9 @@ export default async function PageArticle({
             name: article.video.titre,
             description: article.chapo,
             uploadDate: article.video.misEnLigneLe,
-            duration: dureeISO(article.video.duree),
-            thumbnailUrl: `https://i.ytimg.com/vi/${article.video.youtubeId}/maxresdefault.jpg`,
+            thumbnailUrl:
+              article.video.miniature ||
+              `https://i.ytimg.com/vi/${article.video.youtubeId}/hqdefault.jpg`,
             embedUrl: `https://www.youtube-nocookie.com/embed/${article.video.youtubeId}`,
             contentUrl: `https://www.youtube.com/watch?v=${article.video.youtubeId}`,
           },
@@ -215,6 +216,7 @@ export default async function PageArticle({
             <FacadeVideo
               youtubeId={article.video.youtubeId}
               titre={article.video.titre}
+              miniature={article.video.miniature}
             />
             <figcaption className="etiquette mt-2">
               {article.video.titre || "Vidéo Talaref"}

@@ -17,9 +17,11 @@ import { parserSourceVideo } from "@/lib/video-utils";
 export function FacadeVideo({
   youtubeId,
   titre,
+  miniature,
 }: {
   youtubeId: string;
   titre: string;
+  miniature?: string;
 }) {
   const [actif, setActif] = useState(false);
   const parsed = parserSourceVideo(youtubeId);
@@ -68,7 +70,7 @@ export function FacadeVideo({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`https://vumbnail.com/${idVimeo}.jpg`}
+          src={miniature || `https://vumbnail.com/${idVimeo}.jpg`}
           alt=""
           loading="lazy"
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
@@ -118,14 +120,23 @@ export function FacadeVideo({
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={`https://i.ytimg.com/vi/${idYouTube}/maxresdefault.jpg`}
+        src={miniature || `https://i.ytimg.com/vi/${idYouTube}/maxresdefault.jpg`}
         alt=""
         loading="lazy"
+        onLoad={(e) => {
+          // Si YouTube a renvoyé le placeholder gris 120x90px au lieu d'une erreur 404
+          if (!miniature && e.currentTarget.naturalWidth === 120) {
+            e.currentTarget.src = `https://i.ytimg.com/vi/${idYouTube}/hqdefault.jpg`;
+          }
+        }}
         onError={(e) => {
-          // Si maxresdefault n'est pas disponible pour cette vidéo
           const target = e.currentTarget;
-          if (!target.src.includes("hqdefault")) {
-            target.src = `https://i.ytimg.com/vi/${idYouTube}/hqdefault.jpg`;
+          if (!miniature) {
+            if (!target.src.includes("hqdefault")) {
+              target.src = `https://i.ytimg.com/vi/${idYouTube}/hqdefault.jpg`;
+            } else if (!target.src.includes("mqdefault")) {
+              target.src = `https://i.ytimg.com/vi/${idYouTube}/mqdefault.jpg`;
+            }
           }
         }}
         className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"

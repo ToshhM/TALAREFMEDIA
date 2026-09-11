@@ -75,6 +75,7 @@ function RenduBloc({
           <FacadeVideo
             youtubeId={bloc.video.youtubeId || (bloc.video as any).url || ""}
             titre={bloc.video.titre}
+            miniature={bloc.video.miniature}
           />
           <figcaption className="etiquette mt-2">
             {bloc.video.titre || "La vidéo Talaref du sujet"}
