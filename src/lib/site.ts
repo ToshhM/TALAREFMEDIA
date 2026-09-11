@@ -7,18 +7,27 @@ export const SITE = {
   description:
     "Jeux vidéo, manga, pop culture, politique, musique et image. Six terrains, un seul média — des articles documentés, et les vidéos qui vont avec.",
   /** Sans slash final. */
-  url: (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(
-    /\/$/,
-    "",
-  ),
+  url: (
+    process.env.NEXT_PUBLIC_SITE_URL && process.env.NEXT_PUBLIC_SITE_URL !== "http://localhost:3000"
+      ? process.env.NEXT_PUBLIC_SITE_URL
+      : process.env.NODE_ENV === "production"
+        ? "https://talaref.media"
+        : process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
+  ).replace(/\/$/, ""),
   langue: "fr-FR",
   /** Obligation légale : un média en ligne nomme son directeur de publication. */
   directeurDePublication: "Toshiro Mpika",
   contact: "contact@talaref.co",
 } as const;
 
+export const DOMAINE_CANONIQUE = "https://talaref.media";
+
 export function urlAbsolue(chemin: string): string {
   return `${SITE.url}${chemin.startsWith("/") ? chemin : `/${chemin}`}`;
+}
+
+export function urlCanonique(chemin: string): string {
+  return `${DOMAINE_CANONIQUE}${chemin.startsWith("/") ? chemin : `/${chemin}`}`;
 }
 
 const FORMAT_DATE = new Intl.DateTimeFormat("fr-FR", {

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { getALireAussi, getArticle, getArticles } from "@/lib/content";
 import { formaterRef, getCollection, getUnivers } from "@/lib/univers";
-import { SITE, dureeISO, formaterDate, formaterDuree, formaterImageTransform, formaterObjectPosition, urlAbsolue } from "@/lib/site";
+import { SITE, DOMAINE_CANONIQUE, dureeISO, formaterDate, formaterDuree, formaterImageTransform, formaterObjectPosition, urlAbsolue } from "@/lib/site";
 import { RenduBlocs } from "@/components/blocs";
 import { BarreProgression } from "@/components/barre-progression";
 import { PastilleCode } from "@/components/pastille-code";
@@ -88,9 +88,10 @@ export default async function PageArticle({
   const donneesStructurees = [
     {
       "@context": "https://schema.org",
-      "@type": "Article",
+      "@type": "NewsArticle",
       headline: article.titre,
       description: article.chapo,
+      image: article.imageDeUne?.url ? [article.imageDeUne.url] : undefined,
       datePublished: article.publieLe,
       dateModified: article.misAJourLe ?? article.publieLe,
       author: article.auteurs.map((a) => ({
@@ -98,8 +99,19 @@ export default async function PageArticle({
         name: a.nom,
         url: urlAbsolue(`/auteurs/${a.slug}`),
       })),
-      publisher: { "@type": "Organization", name: SITE.nomComplet },
-      mainEntityOfPage: url,
+      publisher: {
+        "@type": "NewsMediaOrganization",
+        name: SITE.nomComplet,
+        url: DOMAINE_CANONIQUE,
+        logo: {
+          "@type": "ImageObject",
+          url: `${DOMAINE_CANONIQUE}/images/logo-embleme.png`,
+        },
+      },
+      mainEntityOfPage: {
+        "@type": "WebPage",
+        "@id": url,
+      },
       articleSection: collection?.nom ?? univers.nom,
       inLanguage: SITE.langue,
     },

@@ -576,7 +576,9 @@ export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [chargement, setChargement] = useState(true);
-  const [ongletActif, setOngletActif] = useState<"redaction" | "articles" | "utilisateurs">("redaction");
+  const [ongletActif, setOngletActif] = useState<"redaction" | "articles" | "utilisateurs" | "seo">("redaction");
+  const [indexationEnCours, setIndexationEnCours] = useState(false);
+  const [resultatIndexation, setResultatIndexation] = useState<any>(null);
 
   // État du mode édition
   const [modeEdition, setModeEdition] = useState<{
@@ -1411,6 +1413,19 @@ export default function AdminPage() {
                 }`}
               >
                 👥 Utilisateurs & Droits
+              </button>
+            )}
+            {role === "admin" && (
+              <button
+                type="button"
+                onClick={() => setOngletActif("seo")}
+                className={`rounded px-3 py-1.5 text-xs font-bold transition-colors ${
+                  ongletActif === "seo"
+                    ? "bg-nexus text-noir"
+                    : "text-gris hover:text-blanc"
+                }`}
+              >
+                🗺️ Sitemaps & Indexation
               </button>
             )}
           </div>
@@ -3026,6 +3041,190 @@ export default function AdminPage() {
               </table>
             </div>
           )}
+        </section>
+      )}
+
+      {/* ONGLET SITEMAPS & INDEXATION */}
+      {ongletActif === "seo" && role === "admin" && (
+        <section className="space-y-6">
+          <div className="rounded-lg border border-ligne bg-surface p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-ligne pb-4">
+              <div>
+                <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-blanc flex items-center gap-2">
+                  🗺️ Sitemaps & Indexation des moteurs de recherche
+                </h2>
+                <p className="mt-1 text-xs text-gris">
+                  Gestion des fichiers XML et protocoles d'indexation pour Google, Bing, Google News et Google Discover.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={indexationEnCours}
+                onClick={async () => {
+                  setIndexationEnCours(true);
+                  try {
+                    const res = await fetch("/api/admin/indexation", { method: "POST" });
+                    const data = await res.json();
+                    setResultatIndexation(data);
+                  } catch (e: any) {
+                    alert("Erreur lors de la notification des moteurs : " + e.message);
+                  } finally {
+                    setIndexationEnCours(false);
+                  }
+                }}
+                className="inline-flex items-center gap-2 rounded bg-nexus px-4 py-2 text-xs font-bold text-noir hover:bg-nexus/90 transition-colors disabled:opacity-50"
+              >
+                {indexationEnCours ? "Notification en cours..." : "🚀 Notifier Google & Bing (Ping / IndexNow)"}
+              </button>
+            </div>
+
+            {/* Résultat ping si effectué */}
+            {resultatIndexation && (
+              <div className="mt-4 rounded border border-nexus/40 bg-nexus/10 p-4 space-y-2 text-xs">
+                <div className="font-bold text-nexus flex items-center gap-1.5">
+                  ✓ Notification transmise avec succès !
+                </div>
+                <div className="text-blanc space-y-1">
+                  <p>• Domaine officiel : <strong>{resultatIndexation.domaine}</strong></p>
+                  <p>• Articles indexables détectés : <strong>{resultatIndexation.nbArticlesIndexables}</strong></p>
+                  {resultatIndexation.resultats?.map((r: any, idx: number) => (
+                    <p key={idx} className="text-gris">
+                      • {r.service} : <span className={r.succes ? "text-nexus font-semibold" : "text-encre"}>{r.message}</span>
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Cartes des Sitemaps générés en direct */}
+            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+              {/* Carte 1 : Sitemap général */}
+              <div className="rounded-lg border border-ligne/80 bg-noir/60 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-blanc uppercase tracking-wider flex items-center gap-1.5">
+                    🌐 Sitemap Principal
+                  </span>
+                  <span className="rounded bg-nexus/20 px-2 py-0.5 text-[0.625rem] font-bold text-nexus">
+                    XML 0.9
+                  </span>
+                </div>
+                <p className="text-xs text-gris">
+                  Regroupe la page d'accueil, les 6 univers, les rubriques, tous les articles publiés, les pages auteurs et tags.
+                </p>
+                <div className="pt-2 border-t border-ligne/50 flex items-center justify-between">
+                  <span className="font-mono text-[0.6875rem] text-gris truncate">
+                    /sitemap.xml
+                  </span>
+                  <a
+                    href="/sitemap.xml"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-bold text-nexus hover:underline"
+                  >
+                    Ouvrir ↗
+                  </a>
+                </div>
+              </div>
+
+              {/* Carte 2 : Google News Sitemap */}
+              <div className="rounded-lg border border-ligne/80 bg-noir/60 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-blanc uppercase tracking-wider flex items-center gap-1.5">
+                    📰 Google News Sitemap
+                  </span>
+                  <span className="rounded bg-[#ea4335]/20 px-2 py-0.5 text-[0.625rem] font-bold text-[#ea4335]">
+                    Google News
+                  </span>
+                </div>
+                <p className="text-xs text-gris">
+                  Format officiel Google Actualités (`xmlns:news`). Indispensable pour l'apparition rapide sur Google Actualités et Discover.
+                </p>
+                <div className="pt-2 border-t border-ligne/50 flex items-center justify-between">
+                  <span className="font-mono text-[0.6875rem] text-gris truncate">
+                    /news.xml
+                  </span>
+                  <a
+                    href="/news.xml"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-bold text-nexus hover:underline"
+                  >
+                    Ouvrir ↗
+                  </a>
+                </div>
+              </div>
+
+              {/* Carte 3 : Robots.txt */}
+              <div className="rounded-lg border border-ligne/80 bg-noir/60 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-blanc uppercase tracking-wider flex items-center gap-1.5">
+                    🤖 Robots.txt
+                  </span>
+                  <span className="rounded bg-surface-2 px-2 py-0.5 text-[0.625rem] font-bold text-blanc">
+                    Crawler Rules
+                  </span>
+                </div>
+                <p className="text-xs text-gris">
+                  Guide les robots d'exploration, référence automatiquement les sitemaps et protège l'administration et les pages privées.
+                </p>
+                <div className="pt-2 border-t border-ligne/50 flex items-center justify-between">
+                  <span className="font-mono text-[0.6875rem] text-gris truncate">
+                    /robots.txt
+                  </span>
+                  <a
+                    href="/robots.txt"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-bold text-nexus hover:underline"
+                  >
+                    Ouvrir ↗
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Guide d'indexation étape par étape */}
+            <div className="mt-8 rounded-lg border border-ligne/70 bg-surface-2/30 p-5 space-y-4">
+              <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-blanc">
+                📋 Procédure d'indexation officielle pour Talaref Média
+              </h3>
+
+              <div className="space-y-3 text-xs text-gris leading-relaxed">
+                <div className="rounded border border-ligne/50 bg-noir/40 p-3">
+                  <p className="font-bold text-blanc mb-1">
+                    1. Google Search Console (Essentiel)
+                  </p>
+                  <p className="mb-2">
+                    Connectez-vous sur <a href="https://search.google.com/search-console" target="_blank" rel="noreferrer" className="text-nexus underline">Google Search Console</a>, ajoutez la propriété <strong>https://talaref.media</strong> puis dans le menu <em>Sitemaps</em>, soumettez :
+                  </p>
+                  <code className="block bg-noir px-2 py-1 rounded text-nexus font-mono text-[0.75rem]">
+                    https://talaref.media/sitemap.xml
+                  </code>
+                </div>
+
+                <div className="rounded border border-ligne/50 bg-noir/40 p-3">
+                  <p className="font-bold text-blanc mb-1">
+                    2. Google News & Discover (Google Publisher Center)
+                  </p>
+                  <p className="mb-2">
+                    Pour apparaître comme source vérifiée sur Google Actualités, déclarez votre publication sur <a href="https://publishercenter.google.com" target="_blank" rel="noreferrer" className="text-nexus underline">Google Publisher Center</a> et fournissez le sitemap actualités :
+                  </p>
+                  <code className="block bg-noir px-2 py-1 rounded text-nexus font-mono text-[0.75rem]">
+                    https://talaref.media/news.xml
+                  </code>
+                </div>
+
+                <div className="rounded border border-ligne/50 bg-noir/40 p-3">
+                  <p className="font-bold text-blanc mb-1">
+                    3. Bing Webmaster Tools & IndexNow
+                  </p>
+                  <p className="mb-2">
+                    Sur <a href="https://www.bing.com/webmasters" target="_blank" rel="noreferrer" className="text-nexus underline">Bing Webmaster Tools</a>, vous pouvez importer directement votre configuration Google Search Console en 1 clic pour indexer votre média sur Bing, Yahoo et DuckDuckGo.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
       )}
     </main>
