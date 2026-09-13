@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UNIVERS, COLLECTIONS } from "@/lib/univers";
+import { RESEAUX_SOCIAUX } from "@/lib/site";
 import { UserMenu } from "./user-menu";
 import { ThemeToggle } from "./theme-toggle";
+import { IconeInstagram, IconeTikTok } from "./icones-social";
 
 export function MobileNavigation() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -285,6 +287,45 @@ export function MobileNavigation() {
                   </p>
                 </Link>
               ))}
+            </div>
+          </div>
+
+          {/* Réseaux sociaux & Écosystème Talaref */}
+          <div className="px-4 pt-4">
+            <p className="etiquette text-xs px-2 mb-2">Réseaux & Écosystème</p>
+            <div className="grid grid-cols-2 gap-2">
+              {RESEAUX_SOCIAUX.map((r) => {
+                const estInstagram = r.icone === "instagram";
+                return (
+                  <a
+                    key={r.cle}
+                    href={r.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg border border-ligne bg-surface/50 p-2.5 transition-colors hover:border-accent"
+                  >
+                    <span
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded ${
+                        estInstagram ? "text-[#E4405F]" : "text-blanc"
+                      }`}
+                    >
+                      {estInstagram ? (
+                        <IconeInstagram className="h-4 w-4" />
+                      ) : (
+                        <IconeTikTok className="h-4 w-4" />
+                      )}
+                    </span>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-xs font-bold text-blanc truncate">
+                        {r.nom}
+                      </span>
+                      <span className="text-[10px] text-gris truncate">
+                        {r.handle}
+                      </span>
+                    </div>
+                  </a>
+                );
+              })}
             </div>
           </div>
 

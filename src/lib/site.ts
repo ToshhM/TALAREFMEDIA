@@ -20,6 +20,45 @@ export const SITE = {
   contact: "contact@talaref.co",
 } as const;
 
+export const RESEAUX_SOCIAUX = [
+  {
+    cle: "media",
+    nom: "Média",
+    plateforme: "Instagram",
+    handle: "@talaref.media",
+    url: "https://www.instagram.com/talaref.media/",
+    description: "Actualités & Culture pop",
+    icone: "instagram",
+  },
+  {
+    cle: "agence",
+    nom: "Agence",
+    plateforme: "Instagram",
+    handle: "@talaref.agency",
+    url: "https://www.instagram.com/talaref.agency/",
+    description: "Direction créative & Stratégie",
+    icone: "instagram",
+  },
+  {
+    cle: "photo",
+    nom: "Photo",
+    plateforme: "Instagram",
+    handle: "@talarefstudio",
+    url: "https://www.instagram.com/talarefstudio/",
+    description: "Talaref Studio & Photographie",
+    icone: "instagram",
+  },
+  {
+    cle: "tiktok",
+    nom: "TikTok",
+    plateforme: "TikTok",
+    handle: "@talarefff",
+    url: "https://www.tiktok.com/@talarefff",
+    description: "Formats courts & coulisses",
+    icone: "tiktok",
+  },
+] as const;
+
 export const DOMAINE_CANONIQUE = "https://talaref.media";
 
 export function urlAbsolue(chemin: string): string {
