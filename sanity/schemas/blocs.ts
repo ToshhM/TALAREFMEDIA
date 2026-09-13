@@ -39,8 +39,23 @@ export const blocModuleVideo = {
   name: "blocModuleVideo",
   title: "Module vidéo",
   type: "object",
-  description: "0 ou 1 par article. Toujours AVANT le premier intertitre.",
-  fields: [{ name: "video", type: "reference", to: [{ type: "video" }] }],
+  description: "Vidéo unique ou carrousel de vidéos.",
+  fields: [
+    { name: "video", title: "Vidéo principale", type: "reference", to: [{ type: "video" }] },
+    {
+      name: "videos",
+      title: "Liste des vidéos (Carrousel)",
+      type: "array",
+      of: [{ type: "reference", to: [{ type: "video" }] }],
+    },
+    {
+      name: "layout",
+      title: "Disposition",
+      type: "string",
+      options: { list: ["unique", "carrousel"] },
+      initialValue: "carrousel",
+    },
+  ],
 };
 
 /**

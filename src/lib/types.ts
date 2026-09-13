@@ -45,7 +45,13 @@ export type Bloc =
   | { _key: string; _type: "chapo"; texte: string }
   | { _key: string; _type: "paragraphe"; texte: string }
   | { _key: string; _type: "intertitre"; niveau: 2 | 3; texte: string }
-  | { _key: string; _type: "moduleVideo"; video: Video }
+  | {
+      _key: string;
+      _type: "moduleVideo";
+      video?: Video;
+      videos?: Video[];
+      layout?: "unique" | "carrousel";
+    }
   | { _key: string; _type: "laRef"; titre: string; texte: string }
   | { _key: string; _type: "image"; image: Image; disposition?: "standard" | "large" | "portrait" | "carre" }
   | { _key: string; _type: "galerie"; images: Image[]; layout?: "carrousel" | "grille-2" | "grille-3" | "mosaique" }
@@ -73,13 +79,15 @@ export type Bloc =
   | { _key: string; _type: "separateur" };
 
 export type Video = {
-  /** Identifiant YouTube. La vidéo n'a pas de page à elle (§00). */
+  /** Identifiant YouTube, Vimeo ou URL directe. La vidéo n'a pas de page à elle (§00). */
   youtubeId: string;
   titre: string;
   /** Durée en secondes, pour le VideoObject de Schema.org. */
   duree: number;
   misEnLigneLe: string;
   miniature?: string;
+  /** Légende contextuelle de la vidéo. */
+  legende?: string;
 };
 
 export type Personne = {

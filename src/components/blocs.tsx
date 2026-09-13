@@ -5,6 +5,7 @@ import { FacadeVideo } from "./facade-video";
 import { PastilleCode } from "./pastille-code";
 import { TexteRiche } from "./texte-riche";
 import { CarrouselImages } from "./carrousel-images";
+import { CarrouselVideos } from "./carrousel-videos";
 
 /**
  * Le rendu du jeu de blocs FERMÉ — architecture V1 §03.
@@ -69,19 +70,40 @@ function RenduBloc({
       );
     }
 
-    case "moduleVideo":
+    case "moduleVideo": {
+      const videos = bloc.videos && bloc.videos.length > 0
+        ? bloc.videos
+        : bloc.video
+          ? [bloc.video]
+          : [];
+
+      if (videos.length === 0) return null;
+
+      if (videos.length > 1) {
+        return <CarrouselVideos videos={videos} />;
+      }
+
+      const videoUnique = videos[0];
       return (
         <figure className="my-10">
           <FacadeVideo
-            youtubeId={bloc.video.youtubeId || (bloc.video as any).url || ""}
-            titre={bloc.video.titre}
-            miniature={bloc.video.miniature}
+            youtubeId={videoUnique.youtubeId || (videoUnique as any).url || ""}
+            titre={videoUnique.titre}
+            miniature={videoUnique.miniature}
           />
           <figcaption className="etiquette mt-2">
-            {bloc.video.titre || "La vidéo Talaref du sujet"}
+            <span className="font-semibold text-blanc">
+              {videoUnique.titre || "La vidéo Talaref du sujet"}
+            </span>
+            {videoUnique.legende && (
+              <span className="block mt-0.5 text-gris italic font-normal">
+                {videoUnique.legende}
+              </span>
+            )}
           </figcaption>
         </figure>
       );
+    }
 
     /* Le bloc identitaire : un article sans « ref » n'est pas un article
        Talaref. C'est ce qui transforme un article d'actualité en article

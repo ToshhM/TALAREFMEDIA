@@ -50,6 +50,13 @@ type FormBloc = {
   disposition?: "standard" | "large" | "portrait" | "carre";
   layout?: "carrousel" | "grille-2" | "grille-3" | "mosaique";
   images?: Array<{ url: string; alt?: string; credit?: string; legende?: string }>;
+  videos?: Array<{
+    youtubeId: string;
+    titre?: string;
+    legende?: string;
+    miniature?: string;
+    duree?: number;
+  }>;
 };
 
 async function televerserFichier(file: File): Promise<string> {
@@ -240,135 +247,381 @@ function BlocVideoEditor({
   index: number;
   modifierBloc: (index: number, champ: string, valeur: any) => void;
 }) {
-  const [enCours, setEnCours] = useState(false);
-  const [enCoursMiniature, setEnCoursMiniature] = useState(false);
+  const [enCoursUpload, setEnCoursUpload] = useState<{ [key: string]: boolean }>({});
+  const [indexApercu, setIndexApercu] = useState<number>(0);
 
-  const parsed = parserSourceVideo(bloc.youtubeId || "");
-  const idYouTube = parsed.type === "youtube" ? parsed.valeur : null;
+  // Normalisation des vidéos : supporte l'ancien format (propriétés plates) et le nouveau format (tableau videos)
+  const videos: Array<{
+    youtubeId: string;
+    titre?: string;
+    legende?: string;
+    miniature?: string;
+    duree?: number;
+  }> =
+    bloc.videos && bloc.videos.length > 0
+      ? bloc.videos
+      : [
+          {
+            youtubeId: bloc.youtubeId || "",
+            titre: bloc.titre || "",
+            legende: bloc.legende || "",
+            miniature: bloc.miniature || "",
+            duree: bloc.duree || 0,
+          },
+        ];
+
+  const synchroniserVideos = (
+    nouvelles: Array<{
+      youtubeId: string;
+      titre?: string;
+      legende?: string;
+      miniature?: string;
+      duree?: number;
+    }>,
+  ) => {
+    modifierBloc(index, "videos", nouvelles);
+    if (nouvelles.length > 0) {
+      modifierBloc(index, "youtubeId", nouvelles[0].youtubeId);
+      modifierBloc(index, "titre", nouvelles[0].titre || "");
+      modifierBloc(index, "legende", nouvelles[0].legende || "");
+      modifierBloc(index, "miniature", nouvelles[0].miniature || "");
+      modifierBloc(index, "duree", nouvelles[0].duree || 0);
+    } else {
+      modifierBloc(index, "youtubeId", "");
+      modifierBloc(index, "titre", "");
+      modifierBloc(index, "legende", "");
+      modifierBloc(index, "miniature", "");
+      modifierBloc(index, "duree", 0);
+    }
+  };
+
+  const ajouterVideo = () => {
+    const nouvelle = {
+      youtubeId: "",
+      titre: `Vidéo ${videos.length + 1}`,
+      legende: "",
+      miniature: "",
+      duree: 0,
+    };
+    const maj = [...videos, nouvelle];
+    synchroniserVideos(maj);
+    setIndexApercu(maj.length - 1);
+  };
+
+  const supprimerVideo = (vIdx: number) => {
+    if (videos.length <= 1) {
+      synchroniserVideos([
+        {
+          youtubeId: "",
+          titre: "",
+          legende: "",
+          miniature: "",
+          duree: 0,
+        },
+      ]);
+      setIndexApercu(0);
+      return;
+    }
+    const maj = videos.filter((_, i) => i !== vIdx);
+    synchroniserVideos(maj);
+    setIndexApercu((prev) => Math.min(prev, maj.length - 1));
+  };
+
+  const deplacerVideo = (vIdx: number, direction: -1 | 1) => {
+    const cible = vIdx + direction;
+    if (cible < 0 || cible >= videos.length) return;
+    const maj = [...videos];
+    const temp = maj[vIdx];
+    maj[vIdx] = maj[cible];
+    maj[cible] = temp;
+    synchroniserVideos(maj);
+    setIndexApercu(cible);
+  };
+
+  const modifierChamp = (vIdx: number, champ: string, valeur: any) => {
+    const maj = videos.map((v, i) => (i === vIdx ? { ...v, [champ]: valeur } : v));
+    synchroniserVideos(maj);
+  };
+
+  const videoActiveApercu = videos[indexApercu] || videos[0];
 
   return (
-    <div className="space-y-3">
-      <div className="grid gap-2 sm:grid-cols-3">
-        <div className="sm:col-span-2 flex gap-2">
-          <input
-            type="text"
-            value={bloc.youtubeId || ""}
-            onChange={(e) => modifierBloc(index, "youtubeId", e.target.value)}
-            placeholder="Lien YouTube (youtube.com/...), Vimeo (vimeo.com/...) ou fichier vidéo direct"
-            className="w-full rounded border border-ligne bg-noir p-2 text-xs text-blanc focus:border-nexus focus:outline-none"
-          />
-          <label className="shrink-0 cursor-pointer rounded border border-ligne bg-surface-2 px-3 py-2 text-xs font-bold text-blanc hover:bg-ligne flex items-center gap-1">
-            {enCours ? "Upload..." : "🎬 Upload vidéo"}
-            <input
-              type="file"
-              accept="video/mp4,video/webm"
-              className="hidden"
-              disabled={enCours}
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                if (!f) return;
-                setEnCours(true);
-                try {
-                  const url = await televerserFichier(f);
-                  modifierBloc(index, "youtubeId", url);
-                } catch (err: any) {
-                  alert(err.message || "Erreur upload vidéo");
-                } finally {
-                  setEnCours(false);
-                }
-              }}
-            />
-          </label>
+    <div className="space-y-4">
+      {/* En-tête du module avec indicateur de mode */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ligne/80 pb-2.5">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs font-bold uppercase tracking-wider text-blanc">
+            🎬 Module Vidéo{videos.length > 1 ? "s" : ""}
+          </span>
+          <span
+            className={`rounded px-2 py-0.5 font-mono text-[10px] font-bold ${
+              videos.length > 1
+                ? "border border-accent/40 bg-accent/15 text-accent"
+                : "border border-ligne bg-surface-2 text-gris"
+            }`}
+          >
+            {videos.length > 1
+              ? `🎠 Mode Carrousel (${videos.length} vidéos)`
+              : "📺 Lecteur simple (1 vidéo)"}
+          </span>
         </div>
 
-        <input
-          type="text"
-          value={bloc.titre || ""}
-          onChange={(e) => modifierBloc(index, "titre", e.target.value)}
-          placeholder="Titre ou légende de la vidéo"
-          className="rounded border border-ligne bg-noir p-2 text-xs text-blanc focus:border-nexus focus:outline-none"
-        />
+        <button
+          type="button"
+          onClick={ajouterVideo}
+          className="flex items-center gap-1.5 rounded border border-accent bg-accent/10 px-2.5 py-1 text-xs font-bold text-accent transition hover:bg-accent hover:text-noir"
+        >
+          <span>+</span> Ajouter une vidéo au carrousel
+        </button>
       </div>
 
-      {/* Gestion de la miniature de la vidéo */}
-      <div className="rounded border border-ligne/70 bg-surface-2/40 p-2.5 space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="font-mono text-[0.6875rem] uppercase font-bold text-gris tracking-wide">
-            🖼️ Miniature de la vidéo
-          </span>
-          <div className="flex items-center gap-2">
-            {idYouTube && (
-              <button
-                type="button"
-                onClick={() => {
-                  modifierBloc(index, "miniature", `https://i.ytimg.com/vi/${idYouTube}/hqdefault.jpg`);
-                }}
-                className="text-[0.6875rem] font-bold text-nexus hover:underline"
-              >
-                ✨ Récupérer miniature YouTube
-              </button>
-            )}
-            {bloc.miniature && (
-              <button
-                type="button"
-                onClick={() => modifierBloc(index, "miniature", "")}
-                className="text-[0.6875rem] text-encre hover:underline"
-              >
-                ✕ Rétablir automatique
-              </button>
+      {/* Liste des cartes vidéo (CRUD) */}
+      <div className="space-y-3">
+        {videos.map((v, vIdx) => {
+          const parsed = parserSourceVideo(v.youtubeId || "");
+          const idYT = parsed.type === "youtube" ? parsed.valeur : null;
+          const cleUpload = `video_${vIdx}`;
+          const cleUploadMin = `miniature_${vIdx}`;
+          const estOuvertApercu = indexApercu === vIdx;
+
+          return (
+            <div
+              key={vIdx}
+              className={`rounded-lg border bg-surface-2/40 p-3 transition-all ${
+                estOuvertApercu
+                  ? "border-nexus/60 shadow-md ring-1 ring-nexus/20"
+                  : "border-ligne hover:border-ligne/80"
+              }`}
+            >
+              {/* Ligne d'en-tête de la carte */}
+              <div className="mb-2.5 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded bg-noir font-mono text-[10px] font-bold text-accent border border-ligne">
+                    #{vIdx + 1}
+                  </span>
+                  <span className="text-xs font-semibold text-blanc truncate max-w-[200px] sm:max-w-xs">
+                    {v.titre || `Vidéo ${vIdx + 1}`}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  {/* Réordonner */}
+                  <button
+                    type="button"
+                    disabled={vIdx === 0}
+                    onClick={() => deplacerVideo(vIdx, -1)}
+                    className="flex h-6 w-6 items-center justify-center rounded border border-ligne bg-noir text-[11px] text-gris hover:border-blanc hover:text-blanc disabled:opacity-30 disabled:hover:border-ligne disabled:hover:text-gris"
+                    title="Monter"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    disabled={vIdx === videos.length - 1}
+                    onClick={() => deplacerVideo(vIdx, 1)}
+                    className="flex h-6 w-6 items-center justify-center rounded border border-ligne bg-noir text-[11px] text-gris hover:border-blanc hover:text-blanc disabled:opacity-30 disabled:hover:border-ligne disabled:hover:text-gris"
+                    title="Descendre"
+                  >
+                    ↓
+                  </button>
+
+                  {/* Bouton pour afficher l'aperçu */}
+                  <button
+                    type="button"
+                    onClick={() => setIndexApercu(vIdx)}
+                    className={`rounded border px-2 py-0.5 text-[11px] font-medium transition ${
+                      estOuvertApercu
+                        ? "border-nexus bg-nexus/20 text-nexus font-bold"
+                        : "border-ligne bg-noir text-gris hover:text-blanc"
+                    }`}
+                  >
+                    {estOuvertApercu ? "👁️ Aperçu actif" : "Voir aperçu"}
+                  </button>
+
+                  {/* Supprimer */}
+                  <button
+                    type="button"
+                    onClick={() => supprimerVideo(vIdx)}
+                    className="flex h-6 w-6 items-center justify-center rounded border border-ligne bg-noir text-xs text-encre hover:border-encre hover:bg-encre/10 transition"
+                    title="Supprimer cette vidéo"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              {/* Formulaire de la vidéo */}
+              <div className="space-y-2.5 text-xs">
+                {/* Ligne 1 : URL vidéo + Upload + Titre */}
+                <div className="grid gap-2 sm:grid-cols-12">
+                  <div className="sm:col-span-7 flex gap-1.5">
+                    <input
+                      type="text"
+                      value={v.youtubeId || ""}
+                      onChange={(e) => modifierChamp(vIdx, "youtubeId", e.target.value)}
+                      placeholder="Lien YouTube (vidéo ou shorts), Vimeo, ou fichier MP4..."
+                      className="w-full rounded border border-ligne bg-noir p-2 text-xs text-blanc placeholder:text-gris/40 focus:border-nexus focus:outline-none"
+                    />
+                    <label className="shrink-0 cursor-pointer rounded border border-ligne bg-surface-2 px-2.5 py-1.5 text-[11px] font-bold text-blanc hover:bg-ligne flex items-center gap-1">
+                      {enCoursUpload[cleUpload] ? "..." : "🎬 Upload"}
+                      <input
+                        type="file"
+                        accept="video/mp4,video/webm"
+                        className="hidden"
+                        disabled={enCoursUpload[cleUpload]}
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          setEnCoursUpload((prev) => ({ ...prev, [cleUpload]: true }));
+                          try {
+                            const url = await televerserFichier(f);
+                            modifierChamp(vIdx, "youtubeId", url);
+                          } catch (err: any) {
+                            alert(err.message || "Erreur upload vidéo");
+                          } finally {
+                            setEnCoursUpload((prev) => ({ ...prev, [cleUpload]: false }));
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="sm:col-span-5">
+                    <input
+                      type="text"
+                      value={v.titre || ""}
+                      onChange={(e) => modifierChamp(vIdx, "titre", e.target.value)}
+                      placeholder="Titre de la vidéo"
+                      className="w-full rounded border border-ligne bg-noir p-2 text-xs text-blanc placeholder:text-gris/40 focus:border-nexus focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Ligne 2 : Légende de la vidéo */}
+                <div>
+                  <label className="block mb-1 font-mono text-[10px] uppercase tracking-wider text-gris">
+                    💬 Légende de la vidéo (affichée dans l'article sous le lecteur) :
+                  </label>
+                  <input
+                    type="text"
+                    value={v.legende || ""}
+                    onChange={(e) => modifierChamp(vIdx, "legende", e.target.value)}
+                    placeholder="Ex : Extrait de la cérémonie des African Next Awards · Remise du prix..."
+                    className="w-full rounded border border-ligne/80 bg-noir p-2 text-xs text-blanc italic placeholder:text-gris/40 placeholder:not-italic focus:border-nexus focus:outline-none"
+                  />
+                </div>
+
+                {/* Ligne 3 : Miniature */}
+                <div className="rounded border border-ligne/60 bg-noir/50 p-2 space-y-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-1 text-[10px]">
+                    <span className="font-mono uppercase text-gris">
+                      🖼️ Miniature vidéo #{vIdx + 1}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {idYT && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            modifierChamp(
+                              vIdx,
+                              "miniature",
+                              `https://i.ytimg.com/vi/${idYT}/hqdefault.jpg`,
+                            );
+                          }}
+                          className="font-bold text-nexus hover:underline"
+                        >
+                          ✨ Récupérer miniature YouTube
+                        </button>
+                      )}
+                      {v.miniature && (
+                        <button
+                          type="button"
+                          onClick={() => modifierChamp(vIdx, "miniature", "")}
+                          className="text-encre hover:underline"
+                        >
+                          ✕ Rétablir automatique
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-1.5 items-center">
+                    <input
+                      type="text"
+                      value={v.miniature || ""}
+                      onChange={(e) => modifierChamp(vIdx, "miniature", e.target.value)}
+                      placeholder={
+                        idYT
+                          ? "Automatique (miniature YouTube officielle) ou URL..."
+                          : "URL de la miniature personnalisée (ou uploader)..."
+                      }
+                      className="w-full rounded border border-ligne bg-noir p-1.5 text-xs text-blanc placeholder:text-gris/40 focus:border-nexus focus:outline-none"
+                    />
+                    <label className="shrink-0 cursor-pointer rounded border border-ligne bg-surface-2 px-2 py-1 text-[11px] font-bold text-blanc hover:bg-ligne flex items-center gap-1">
+                      {enCoursUpload[cleUploadMin] ? "..." : "📁 Uploader"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={enCoursUpload[cleUploadMin]}
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          setEnCoursUpload((prev) => ({ ...prev, [cleUploadMin]: true }));
+                          try {
+                            const url = await televerserFichier(f);
+                            modifierChamp(vIdx, "miniature", url);
+                          } catch (err: any) {
+                            alert(err.message || "Erreur upload image");
+                          } finally {
+                            setEnCoursUpload((prev) => ({ ...prev, [cleUploadMin]: false }));
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Bouton Ajouter en bas de liste */}
+      <button
+        type="button"
+        onClick={ajouterVideo}
+        className="w-full rounded-md border border-dashed border-ligne/80 bg-surface-2/20 py-2.5 text-xs font-semibold text-gris hover:border-accent hover:text-accent hover:bg-accent/5 transition flex items-center justify-center gap-2"
+      >
+        <span>+</span> Ajouter une autre vidéo à ce module ({videos.length >= 1 ? "Mode carrousel" : "Nouvelle vidéo"})
+      </button>
+
+      {/* Zone d'aperçu en direct */}
+      {videoActiveApercu?.youtubeId ? (
+        <div className="rounded-lg border border-ligne/80 bg-surface-2/30 p-3 space-y-2">
+          <div className="flex items-center justify-between text-[11px] font-mono text-gris">
+            <span className="uppercase">
+              Aperçu en direct (Vidéo #{indexApercu + 1} : {videoActiveApercu.titre || "Sans titre"})
+            </span>
+            {videos.length > 1 && (
+              <span className="text-accent">
+                Affichage en carrousel de {videos.length} vidéos
+              </span>
             )}
           </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-2 items-center">
-          <input
-            type="text"
-            value={bloc.miniature || ""}
-            onChange={(e) => modifierBloc(index, "miniature", e.target.value)}
-            placeholder={
-              idYouTube
-                ? "Automatique (miniature YouTube officielle) ou collez une URL personnalisée..."
-                : "URL de la miniature personnalisée (ou uploadez un fichier image)..."
-            }
-            className="w-full rounded border border-ligne bg-noir p-2 text-xs text-blanc focus:border-nexus focus:outline-none"
-          />
-          <label className="shrink-0 cursor-pointer rounded border border-ligne bg-surface-2 px-3 py-2 text-xs font-bold text-blanc hover:bg-ligne flex items-center gap-1">
-            {enCoursMiniature ? "Upload..." : "📁 Uploader miniature"}
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              disabled={enCoursMiniature}
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                if (!f) return;
-                setEnCoursMiniature(true);
-                try {
-                  const url = await televerserFichier(f);
-                  modifierBloc(index, "miniature", url);
-                } catch (err: any) {
-                  alert(err.message || "Erreur upload image");
-                } finally {
-                  setEnCoursMiniature(false);
-                }
-              }}
-            />
-          </label>
-        </div>
-      </div>
-
-      {bloc.youtubeId ? (
-        <div className="mt-3">
-          <p className="mb-1.5 font-mono text-[0.625rem] uppercase text-gris">
-            Aperçu de la vidéo dans l'article (YouTube, Vimeo ou lecteur direct) :
-          </p>
           <div className="max-w-md">
             <FacadeVideo
-              youtubeId={bloc.youtubeId}
-              titre={bloc.titre || "Aperçu vidéo"}
-              miniature={bloc.miniature}
+              key={`preview-${indexApercu}-${videoActiveApercu.youtubeId}`}
+              youtubeId={videoActiveApercu.youtubeId}
+              titre={videoActiveApercu.titre || "Aperçu vidéo"}
+              miniature={videoActiveApercu.miniature}
             />
           </div>
+          {videoActiveApercu.legende && (
+            <p className="text-xs italic text-gris max-w-md">
+              💬 Légende : {videoActiveApercu.legende}
+            </p>
+          )}
         </div>
       ) : null}
     </div>
@@ -930,12 +1183,34 @@ export default function AdminPage() {
         };
       }
       if (b._type === "moduleVideo") {
+        const rawVideos =
+          (b as any).videos && (b as any).videos.length > 0
+            ? (b as any).videos
+            : b.video
+              ? [b.video]
+              : [];
+        const listeVideos = rawVideos.map((v: any) => ({
+          youtubeId: v.youtubeId || v.url || "",
+          titre: v.titre || "",
+          legende: v.legende || "",
+          miniature: v.miniature || "",
+          duree: v.duree || 0,
+        }));
+        const premier = listeVideos[0] || {
+          youtubeId: b.video?.youtubeId || "",
+          titre: b.video?.titre || "",
+          legende: (b.video as any)?.legende || "",
+          miniature: (b.video as any)?.miniature || "",
+          duree: b.video?.duree || 0,
+        };
         return {
           _type: "moduleVideo",
-          youtubeId: b.video?.youtubeId,
-          titre: b.video?.titre,
-          duree: b.video?.duree,
-          miniature: (b.video as any)?.miniature,
+          videos: listeVideos.length > 0 ? listeVideos : [premier],
+          youtubeId: premier.youtubeId,
+          titre: premier.titre,
+          legende: premier.legende,
+          duree: premier.duree,
+          miniature: premier.miniature,
         };
       }
       if (b._type === "galerie") {
@@ -1030,7 +1305,18 @@ export default function AdminPage() {
     } else if (type === "moduleVideo") {
       setBlocs((prev) => [
         ...prev,
-        { _type: "moduleVideo", youtubeId: "", titre: "Vidéo du sujet", duree: 0 },
+        {
+          _type: "moduleVideo",
+          videos: [
+            {
+              youtubeId: "",
+              titre: "",
+              legende: "",
+              miniature: "",
+              duree: 0,
+            },
+          ],
+        },
       ]);
     } else if (type === "galerie") {
       setBlocs((prev) => [
@@ -1139,17 +1425,46 @@ export default function AdminPage() {
               };
             }
             if (b._type === "moduleVideo") {
-              const parsed = parserSourceVideo(b.youtubeId || "");
+              const videosSource =
+                b.videos && b.videos.length > 0
+                  ? b.videos
+                  : [
+                      {
+                        youtubeId: b.youtubeId || "",
+                        titre: b.titre || "Vidéo du sujet",
+                        legende: b.legende,
+                        miniature: b.miniature,
+                        duree: b.duree || 0,
+                      },
+                    ];
+
+              const videosTraitees = videosSource
+                .map((v) => {
+                  const parsed = parserSourceVideo(v.youtubeId || "");
+                  return {
+                    youtubeId: parsed.valeur || v.youtubeId || "dQw4w9WgXcQ",
+                    titre: v.titre || "Vidéo du sujet",
+                    legende: v.legende?.trim() || undefined,
+                    duree: v.duree || 0,
+                    misEnLigneLe: new Date().toISOString().split("T")[0],
+                    miniature: v.miniature?.trim() || undefined,
+                  };
+                })
+                .filter((v) => Boolean(v.youtubeId && v.youtubeId !== "dQw4w9WgXcQ") || videosSource.length === 1);
+
+              const videoFinale = videosTraitees[0] || {
+                youtubeId: "dQw4w9WgXcQ",
+                titre: "Vidéo du sujet",
+                duree: 0,
+                misEnLigneLe: new Date().toISOString().split("T")[0],
+              };
+
               return {
                 _key,
                 _type: "moduleVideo",
-                video: {
-                  youtubeId: parsed.valeur || "dQw4w9WgXcQ",
-                  titre: b.titre || "Vidéo du sujet",
-                  duree: b.duree || 0,
-                  misEnLigneLe: new Date().toISOString().split("T")[0],
-                  miniature: b.miniature?.trim() || undefined,
-                },
+                video: videoFinale,
+                videos: videosTraitees.length > 0 ? videosTraitees : [videoFinale],
+                layout: videosTraitees.length > 1 ? "carrousel" : "unique",
               };
             }
             if (b._type === "galerie") {
