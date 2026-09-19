@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import { variablesPolices } from "@/lib/fonts";
 import { SITE } from "@/lib/site";
 import { SiteHeader } from "@/components/site-header";
@@ -93,6 +94,7 @@ export default function RootLayout({
         </div>
         <SiteFooter />
         <MobileNavigation />
+        <Analytics />
       </body>
     </html>
   );
