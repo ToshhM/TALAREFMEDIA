@@ -13,6 +13,7 @@ import { FacadeVideo } from "@/components/facade-video";
 import { slugifier } from "@/lib/reserved";
 import { EditeurTexteRiche } from "@/components/editeur-texte-riche";
 import { formaterImageTransform, formaterObjectPosition } from "@/lib/site";
+import { StudioVideosManager } from "@/components/studio-videos-manager";
 
 function parseCadragePourcentage(cadrage: string): number {
   if (cadrage === "top") return 0;
@@ -638,7 +639,10 @@ function BlocGalerieEditor({
   modifierBloc: (index: number, champ: string, valeur: any) => void;
 }) {
   const [enCours, setEnCours] = useState(false);
+  const [progression, setProgression] = useState<{ actuel: number; total: number } | null>(null);
   const [urlAjout, setUrlAjout] = useState("");
+  const [glisseDessus, setGlisseDessus] = useState(false);
+  const [slotGlisseIdx, setSlotGlisseIdx] = useState<number | null>(null);
   const images = bloc.images || [];
   const layout = bloc.layout || "carrousel";
 
@@ -654,29 +658,116 @@ function BlocGalerieEditor({
     { id: "mosaique", label: "Mosaïque", icone: "🧩", desc: "Grande + petites" },
   ];
 
+  const ajouterImages = (nouvellesUrls: string[]) => {
+    const urlsFiltrees = nouvellesUrls.map((u) => u.trim()).filter(Boolean);
+    if (urlsFiltrees.length === 0) return;
+    modifierBloc(index, "images", (prevImages: any) => {
+      const base = Array.isArray(prevImages) ? prevImages : [];
+      const nouveauxSlots = urlsFiltrees.map((url) => ({
+        url,
+        alt: "",
+        credit: "Talaref Media",
+        legende: "",
+      }));
+      return [...base, ...nouveauxSlots];
+    });
+  };
+
   const ajouterImage = (url: string) => {
     if (!url.trim()) return;
-    modifierBloc(index, "images", [
-      ...images,
-      { url: url.trim(), alt: "", credit: "Talaref Media", legende: "" },
-    ]);
+    ajouterImages([url]);
   };
 
   const supprimerImage = (imgIdx: number) => {
-    modifierBloc(
-      index,
-      "images",
-      images.filter((_, i) => i !== imgIdx),
-    );
+    modifierBloc(index, "images", (prevImages: any) => {
+      const arr = Array.isArray(prevImages) ? prevImages : [];
+      return arr.filter((_: any, i: number) => i !== imgIdx);
+    });
   };
 
   const modifierProprieteImage = (imgIdx: number, champ: string, valeur: string) => {
-    const nouvelles = images.map((img, i) => (i === imgIdx ? { ...img, [champ]: valeur } : img));
-    modifierBloc(index, "images", nouvelles);
+    modifierBloc(index, "images", (prevImages: any) => {
+      const arr = Array.isArray(prevImages) ? prevImages : [];
+      return arr.map((img: any, i: number) => (i === imgIdx ? { ...img, [champ]: valeur } : img));
+    });
+  };
+
+  const deplacerImage = (deIdx: number, versIdx: number) => {
+    if (deIdx === versIdx) return;
+    modifierBloc(index, "images", (prevImages: any) => {
+      const arr = Array.isArray(prevImages) ? [...prevImages] : [];
+      if (deIdx < 0 || deIdx >= arr.length || versIdx < 0 || versIdx >= arr.length) return arr;
+      const [element] = arr.splice(deIdx, 1);
+      arr.splice(versIdx, 0, element);
+      return arr;
+    });
+  };
+
+  const traiterFichiers = async (fichiers: File[]) => {
+    const imagesFiles = fichiers.filter(
+      (f) => f.type.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(f.name),
+    );
+    if (imagesFiles.length === 0) return;
+    setEnCours(true);
+    setProgression({ actuel: 0, total: imagesFiles.length });
+    try {
+      for (let i = 0; i < imagesFiles.length; i++) {
+        setProgression({ actuel: i + 1, total: imagesFiles.length });
+        const url = await televerserFichier(imagesFiles[i]);
+        ajouterImages([url]);
+      }
+    } catch (err: any) {
+      alert(err.message || "Erreur upload galerie");
+    } finally {
+      setEnCours(false);
+      setProgression(null);
+    }
+  };
+
+  const gererAjoutUrl = () => {
+    if (!urlAjout.trim()) return;
+    const urls = urlAjout
+      .split(/[\n,\s]+/)
+      .map((u) => u.trim())
+      .filter((u) => u.startsWith("http://") || u.startsWith("https://") || u.startsWith("/"));
+    if (urls.length > 0) {
+      ajouterImages(urls);
+      setUrlAjout("");
+    } else {
+      ajouterImage(urlAjout);
+      setUrlAjout("");
+    }
   };
 
   return (
-    <div className="space-y-4">
+    <div
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes("Files")) {
+          e.preventDefault();
+          setGlisseDessus(true);
+        }
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setGlisseDessus(false);
+        }
+      }}
+      onDrop={(e) => {
+        if (e.dataTransfer.types.includes("Files")) {
+          e.preventDefault();
+          setGlisseDessus(false);
+          const files = Array.from(e.dataTransfer.files || []);
+          if (files.length > 0) {
+            traiterFichiers(files);
+          }
+        }
+      }}
+      className={`space-y-4 rounded-lg border p-3 transition-colors ${
+        glisseDessus
+          ? "border-dashed border-accent bg-accent/10"
+          : "border-transparent"
+      }`}
+    >
       {/* Sélecteur de layout pour la galerie */}
       <div>
         <label className="block text-[11px] font-mono uppercase tracking-wider text-gris mb-1.5">
@@ -702,10 +793,16 @@ function BlocGalerieEditor({
         </div>
       </div>
 
-      {/* Ajout de photos (Upload mobile ou URL) */}
+      {/* Ajout de photos (Upload mobile ou URL, Drag & Drop) */}
       <div className="flex flex-col sm:flex-row gap-2">
         <label className="flex min-h-[42px] cursor-pointer items-center justify-center gap-2 rounded border border-ligne bg-surface-2 px-4 py-2 text-xs font-bold text-blanc hover:bg-ligne active:scale-95 transition-all shrink-0">
-          <span>{enCours ? "Téléversement..." : "📁 Uploader photos (≤ 2 Mo)"}</span>
+          <span>
+            {enCours
+              ? progression
+                ? `Téléversement (${progression.actuel}/${progression.total})...`
+                : "Téléversement..."
+              : "📁 Uploader photos (≤ 2 Mo)"}
+          </span>
           <input
             type="file"
             accept="image/*"
@@ -715,17 +812,8 @@ function BlocGalerieEditor({
             onChange={async (e) => {
               const files = Array.from(e.target.files || []);
               if (files.length === 0) return;
-              setEnCours(true);
-              try {
-                for (const f of files) {
-                  const url = await televerserFichier(f);
-                  ajouterImage(url);
-                }
-              } catch (err: any) {
-                alert(err.message || "Erreur upload galerie");
-              } finally {
-                setEnCours(false);
-              }
+              await traiterFichiers(files);
+              e.target.value = "";
             }}
           />
         </label>
@@ -738,23 +826,15 @@ function BlocGalerieEditor({
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                if (urlAjout.trim()) {
-                  ajouterImage(urlAjout);
-                  setUrlAjout("");
-                }
+                gererAjoutUrl();
               }
             }}
-            placeholder="Ou coller une URL d'image (https://...)"
+            placeholder="Ou coller une ou plusieurs URLs d'images (https://...)"
             className="flex-1 min-h-[42px] rounded border border-ligne bg-noir px-3 text-xs text-blanc placeholder-gris/50 focus:border-nexus focus:outline-none"
           />
           <button
             type="button"
-            onClick={() => {
-              if (urlAjout.trim()) {
-                ajouterImage(urlAjout);
-                setUrlAjout("");
-              }
-            }}
+            onClick={gererAjoutUrl}
             className="min-h-[42px] rounded border border-ligne bg-surface-2 px-3 text-xs font-bold text-blanc hover:bg-ligne active:scale-95 transition-all shrink-0"
           >
             + Ajouter
@@ -762,19 +842,53 @@ function BlocGalerieEditor({
         </div>
       </div>
 
+      {/* Indicateur de glisser-déposer actif */}
+      {glisseDessus && (
+        <div className="flex items-center justify-center rounded border border-dashed border-accent bg-accent/20 p-3 text-xs font-bold text-accent">
+          📸 Déposez vos images ici pour les ajouter à la galerie !
+        </div>
+      )}
+
       {/* Liste et miniatures des photos dans la galerie */}
       {images.length > 0 ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs font-mono text-gris">
-            <span>{images.length} photo{images.length > 1 ? "s" : ""} dans la galerie</span>
-            <span className="text-[11px] text-accent">Mode : {optionsLayout.find((o) => o.id === layout)?.label}</span>
+            <span>
+              {images.length} photo{images.length > 1 ? "s" : ""} dans la galerie
+            </span>
+            <span className="text-[11px] text-accent">
+              Mode : {optionsLayout.find((o) => o.id === layout)?.label}
+            </span>
           </div>
 
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4">
             {images.map((img, imgIdx) => (
               <div
                 key={imgIdx}
-                className="group relative rounded-md border border-ligne bg-surface-2 overflow-hidden flex flex-col"
+                draggable={!enCours}
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("text/plain", imgIdx.toString());
+                  setSlotGlisseIdx(imgIdx);
+                }}
+                onDragEnd={() => setSlotGlisseIdx(null)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const sourceIdxStr = e.dataTransfer.getData("text/plain");
+                  const sourceIdx = parseInt(sourceIdxStr, 10);
+                  if (!isNaN(sourceIdx)) {
+                    deplacerImage(sourceIdx, imgIdx);
+                  }
+                  setSlotGlisseIdx(null);
+                }}
+                className={`group relative rounded-md border bg-surface-2 overflow-hidden flex flex-col transition-all cursor-grab active:cursor-grabbing ${
+                  slotGlisseIdx === imgIdx
+                    ? "border-accent opacity-50"
+                    : "border-ligne hover:border-nexus"
+                }`}
+                title="Glissez-déposez pour réorganiser l'ordre des photos"
               >
                 <div className="relative aspect-square w-full overflow-hidden bg-noir/40">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -783,14 +897,50 @@ function BlocGalerieEditor({
                     alt={img.alt || `Photo ${imgIdx + 1}`}
                     className="h-full w-full object-cover"
                   />
+
+                  {/* Boutons d'ordonnancement rapide ← et → */}
+                  <div className="absolute top-1.5 left-1.5 flex gap-1 z-10">
+                    {imgIdx > 0 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deplacerImage(imgIdx, imgIdx - 1);
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-noir/85 text-xs font-bold text-blanc hover:bg-noir active:scale-95 shadow-md"
+                        title="Déplacer vers la gauche / avant"
+                      >
+                        ←
+                      </button>
+                    )}
+                    {imgIdx < images.length - 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deplacerImage(imgIdx, imgIdx + 1);
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-noir/85 text-xs font-bold text-blanc hover:bg-noir active:scale-95 shadow-md"
+                        title="Déplacer vers la droite / après"
+                      >
+                        →
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Bouton de suppression */}
                   <button
                     type="button"
-                    onClick={() => supprimerImage(imgIdx)}
-                    className="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-noir/85 text-xs font-bold text-encre hover:bg-noir active:scale-95 shadow-md"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      supprimerImage(imgIdx);
+                    }}
+                    className="absolute top-1.5 right-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-noir/85 text-xs font-bold text-encre hover:bg-noir active:scale-95 shadow-md"
                     title="Supprimer cette photo"
                   >
                     ✕
                   </button>
+
                   <span className="absolute bottom-1 left-1.5 rounded bg-noir/70 px-1.5 py-0.5 font-mono text-[10px] text-blanc/80">
                     #{imgIdx + 1}
                   </span>
@@ -817,7 +967,7 @@ function BlocGalerieEditor({
         </div>
       ) : (
         <p className="text-xs text-gris/60 italic py-2">
-          Aucune photo dans la galerie. Ajoutez-en via le bouton d&apos;upload ou un lien URL.
+          Aucune photo dans la galerie. Glissez-déposez des photos ici, ou utilisez le bouton d&apos;upload / un lien URL.
         </p>
       )}
     </div>
@@ -829,7 +979,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [chargement, setChargement] = useState(true);
-  const [ongletActif, setOngletActif] = useState<"redaction" | "articles" | "utilisateurs" | "seo">("redaction");
+  const [ongletActif, setOngletActif] = useState<"redaction" | "articles" | "videos" | "utilisateurs" | "seo">("redaction");
   const [indexationEnCours, setIndexationEnCours] = useState(false);
   const [resultatIndexation, setResultatIndexation] = useState<any>(null);
 
@@ -1354,7 +1504,12 @@ export default function AdminPage() {
 
   const modifierBloc = (index: number, champ: string, valeur: any) => {
     setBlocs((prev) =>
-      prev.map((b, i) => (i === index ? { ...b, [champ]: valeur } : b)),
+      prev.map((b, i) => {
+        if (i !== index) return b;
+        const nouvelleValeur =
+          typeof valeur === "function" ? valeur((b as any)[champ]) : valeur;
+        return { ...b, [champ]: nouvelleValeur };
+      }),
     );
   };
 
@@ -1715,6 +1870,19 @@ export default function AdminPage() {
                 }`}
               >
                 📑 Tous les articles ({listeArticles.length})
+              </button>
+            )}
+            {role === "admin" && (
+              <button
+                type="button"
+                onClick={() => setOngletActif("videos")}
+                className={`rounded px-3 py-1.5 text-xs font-bold transition-colors ${
+                  ongletActif === "videos"
+                    ? "bg-nexus text-noir"
+                    : "text-gris hover:text-blanc"
+                }`}
+              >
+                🎬 Studio Vidéos
               </button>
             )}
             {role === "admin" && (
@@ -3541,6 +3709,17 @@ export default function AdminPage() {
             </div>
           </div>
         </section>
+      )}
+
+      {/* ONGLET GESTION DES VIDÉOS (CRUD STUDIO) */}
+      {ongletActif === "videos" && role === "admin" && (
+        <StudioVideosManager
+          articlesDisponibles={listeArticles.map((a) => ({
+            slug: a.slug,
+            titre: a.titre,
+            univers: a.univers,
+          }))}
+        />
       )}
     </main>
   );

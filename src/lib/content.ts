@@ -25,7 +25,7 @@ function trierParDate(articles: Article[]): Article[] {
   );
 }
 
-async function tousLesArticles(): Promise<Article[]> {
+export async function tousLesArticles(): Promise<Article[]> {
   if (supabase) {
     try {
       const { data, error } = await supabase

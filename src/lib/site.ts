@@ -108,22 +108,52 @@ export function formaterObjectPosition(cadrage?: string): string {
 }
 
 /**
- * Calcule le style CSS `transform` pour le zoom / redimensionnement et décalage adaptatif.
+ * Calcule le style CSS `transform` pour le zoom / redimensionnement et le recadrage vertical réactif.
  */
 export function formaterImageTransform(zoom?: number, cadrage?: string, estAdaptatif?: boolean): string | undefined {
   const z = typeof zoom === "number" && !isNaN(zoom) ? zoom : 1;
   const parts: string[] = [];
+
   if (z !== 1) {
     parts.push(`scale(${z})`);
   }
-  if (estAdaptatif && cadrage) {
+
+  if (cadrage) {
     const match = cadrage.match(/^(\d{1,3})%?$/);
     const pct = match ? parseInt(match[1], 10) : (cadrage === "top" ? 0 : cadrage === "bottom" ? 100 : 50);
-    // Décalage vertical doux : de -20% à +20%
-    const shift = (pct - 50) * 0.4;
-    if (Math.abs(shift) > 0.5) {
-      parts.push(`translateY(${shift.toFixed(1)}%)`);
+
+    if (estAdaptatif) {
+      // En mode adaptatif (photo entière dans le flou d'ambiance)
+      const shift = (pct - 50) * 0.4;
+      if (Math.abs(shift) > 0.5) {
+        parts.push(`translateY(${shift.toFixed(1)}%)`);
+      }
+    } else {
+      // En mode standard (16:9, portrait, carré)
+      if (z > 1) {
+        // Image zoomée : décalage pour caler le cadrage (0% = haut/tête, 100% = bas/sol)
+        const maxShiftPct = ((z - 1) / (2 * z)) * 100;
+        const shift = ((50 - pct) / 50) * maxShiftPct;
+        if (Math.abs(shift) > 0.1) {
+          parts.push(`translateY(${shift.toFixed(1)}%)`);
+        }
+      } else if (z < 1) {
+        // Image dézoomée (ex: 80% réduit) : déplacement de l'image dans le cadre vers le haut ou le bas
+        const maxShiftPct = ((1 - z) / 2) * 100;
+        const shift = ((pct - 50) / 50) * maxShiftPct;
+        if (Math.abs(shift) > 0.1) {
+          parts.push(`translateY(${shift.toFixed(1)}%)`);
+        }
+      } else {
+        // z === 1 : décalage vertical fin pour recadrer les images 16:9 et donner un retour immédiat
+        const shift = ((50 - pct) / 50) * 15;
+        if (Math.abs(shift) > 0.5) {
+          parts.push(`translateY(${shift.toFixed(1)}%)`);
+        }
+      }
     }
   }
+
   return parts.length > 0 ? parts.join(" ") : undefined;
 }
+

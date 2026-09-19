@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getArticlesALaUne } from "@/lib/content";
 import { UNIVERS, getCollectionsForUnivers } from "@/lib/univers";
 import { CarteArticle } from "@/components/carte-article";
+import { getVideos } from "@/lib/videos-store";
+import { SectionVideosKonbini } from "@/components/section-videos-konbini";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -15,6 +17,9 @@ export const revalidate = 0;
 export default async function Home() {
   const { selection, reste } = await getArticlesALaUne();
   const [une, ...secondaires] = selection;
+
+  const videosEnUne = await getVideos({ aLaUne: true });
+  const toutesLesVideos = videosEnUne.length > 0 ? videosEnUne : await getVideos();
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
@@ -77,6 +82,9 @@ export default async function Home() {
           })}
         </ul>
       </section>
+
+      {/* Rubrique "Nos meilleures vidéos !" style Konbini */}
+      <SectionVideosKonbini videos={toutesLesVideos} />
 
       {reste.length > 0 ? (
         <section aria-labelledby="derniers">
