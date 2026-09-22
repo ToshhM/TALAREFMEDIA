@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import type { VideoItem } from "@/lib/video-types";
+import { extraireIdYouTube } from "@/lib/video-utils";
 import { UNIVERS, type UniverseSlug } from "@/lib/univers";
 import { ModalLecteurVideo } from "./modal-lecteur-video";
 
@@ -218,12 +219,6 @@ export function GalerieVideosInteractive({
       ) : (
         <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {videosFiltrees.map((v) => {
-            const miniatureUrl =
-              v.miniature ||
-              (v.sourceType === "youtube"
-                ? `https://i.ytimg.com/vi/${v.urlOuId}/maxresdefault.jpg`
-                : undefined);
-
             const isVertical = v.aspectRatio === "9:16" || v.aspectRatio === "4:5";
 
             return (
@@ -238,19 +233,7 @@ export function GalerieVideosInteractive({
                     isVertical ? "aspect-[4/3] sm:aspect-video" : "aspect-video"
                   }`}
                 >
-                  {miniatureUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={miniatureUrl}
-                      alt={v.titre}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-3xl text-gris">
-                      🎬
-                    </div>
-                  )}
+                  <VignetteGalerieVideo video={v} isVertical={isVertical} />
 
                   {/* Voile sombre et bouton lecture */}
                   <div className="absolute inset-0 bg-noir/30 transition-colors group-hover:bg-noir/10" />
@@ -357,5 +340,102 @@ export function GalerieVideosInteractive({
         onFermer={() => setVideoActive(null)}
       />
     </div>
+  );
+}
+
+/**
+ * Vignette adaptative pour la grille de la galerie vidéo.
+ * Supporte le plein écran sans bandes noires grâce aux miniatures YouTube haute définition (oar2, maxres, hq720, mq)
+ * et à un fond d'ambiance flouté.
+ */
+function VignetteGalerieVideo({
+  video,
+  isVertical,
+}: {
+  video: VideoItem;
+  isVertical: boolean;
+}) {
+  const idYT = useMemo(() => {
+    if (video.sourceType === "youtube") {
+      return extraireIdYouTube(video.urlOuId) || video.urlOuId;
+    }
+    if (video.miniature && video.miniature.includes("ytimg.com")) {
+      return extraireIdYouTube(video.miniature);
+    }
+    return null;
+  }, [video.sourceType, video.urlOuId, video.miniature]);
+
+  const urlsCandidates = useMemo(() => {
+    if (video.miniature && !video.miniature.includes("ytimg.com")) {
+      return [video.miniature];
+    }
+
+    if (idYT) {
+      if (isVertical) {
+        return [
+          `https://i.ytimg.com/vi/${idYT}/oar2.jpg`,
+          `https://i.ytimg.com/vi/${idYT}/maxresdefault.jpg`,
+          `https://i.ytimg.com/vi/${idYT}/hq720.jpg`,
+          `https://i.ytimg.com/vi/${idYT}/mqdefault.jpg`,
+          video.miniature || `https://i.ytimg.com/vi/${idYT}/hqdefault.jpg`,
+        ];
+      }
+      return [
+        `https://i.ytimg.com/vi/${idYT}/maxresdefault.jpg`,
+        `https://i.ytimg.com/vi/${idYT}/hq720.jpg`,
+        `https://i.ytimg.com/vi/${idYT}/mqdefault.jpg`,
+        video.miniature || `https://i.ytimg.com/vi/${idYT}/hqdefault.jpg`,
+      ];
+    }
+
+    return video.miniature ? [video.miniature] : [];
+  }, [idYT, video.miniature, isVertical]);
+
+  const [indexUrl, setIndexUrl] = useState(0);
+  const srcActuelle = urlsCandidates[indexUrl];
+
+  const passerSuivante = () => {
+    if (indexUrl < urlsCandidates.length - 1) {
+      setIndexUrl((prev) => prev + 1);
+    }
+  };
+
+  if (!srcActuelle) {
+    return (
+      <div className="flex h-full w-full items-center justify-center text-3xl text-gris">
+        🎬
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Halo d'ambiance flou pour supprimer toute bande noire résiduelle */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={srcActuelle}
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover blur-xl opacity-50 brightness-75 transition-opacity duration-500"
+      />
+
+      {/* Image nette principale */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={srcActuelle}
+        alt={video.titre}
+        loading="lazy"
+        onError={passerSuivante}
+        onLoad={(e) => {
+          if (
+            e.currentTarget.naturalWidth === 120 &&
+            e.currentTarget.naturalHeight === 90
+          ) {
+            passerSuivante();
+          }
+        }}
+        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+      />
+    </>
   );
 }

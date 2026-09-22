@@ -202,7 +202,9 @@ export async function tousLesVideos(): Promise<VideoItem[]> {
             miniature:
               vItem.miniature ||
               (parsed.type === "youtube"
-                ? `https://i.ytimg.com/vi/${valeurCle}/hqdefault.jpg`
+                ? ratioAuto === "9:16"
+                  ? `https://i.ytimg.com/vi/${valeurCle}/oar2.jpg`
+                  : `https://i.ytimg.com/vi/${valeurCle}/maxresdefault.jpg`
                 : art.imageDeUne?.url),
             duree: vItem.duree
               ? typeof vItem.duree === "number"
