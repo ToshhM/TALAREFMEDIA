@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import type { Video } from "@/lib/types";
 import { FacadeVideo } from "./facade-video";
 import { parserSourceVideo } from "@/lib/video-utils";
@@ -84,19 +84,6 @@ export function CarrouselVideos({
   if (!videos || videos.length === 0) return null;
 
   const videoActive = videos[indexActuel];
-
-  // Extraction d'une miniature par défaut si non renseignée
-  const obtenirMiniature = (v: Video) => {
-    if (v.miniature && v.miniature.trim()) return v.miniature.trim();
-    const parsed = parserSourceVideo(v.youtubeId || "");
-    if (parsed.type === "youtube") {
-      return `https://i.ytimg.com/vi/${parsed.valeur}/hqdefault.jpg`;
-    }
-    if (parsed.type === "vimeo") {
-      return `https://vumbnail.com/${parsed.valeur}.jpg`;
-    }
-    return null;
-  };
 
   return (
     <figure
@@ -192,7 +179,6 @@ export function CarrouselVideos({
             >
               {videos.map((v, i) => {
                 const estActif = i === indexActuel;
-                const minUrl = obtenirMiniature(v);
                 return (
                   <button
                     key={i}
@@ -206,29 +192,17 @@ export function CarrouselVideos({
                     aria-label={`Sélectionner vidéo ${i + 1} : ${v.titre || "Vidéo"}`}
                     aria-current={estActif ? "true" : undefined}
                   >
-                    <div className="relative aspect-video w-full overflow-hidden bg-noir/50">
-                      {minUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={minUrl}
-                          alt={v.titre || `Miniature ${i + 1}`}
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center bg-surface-2 text-gris text-xs font-mono">
-                          🎬 Vidéo
-                        </div>
-                      )}
+                    <div className="relative aspect-video w-full overflow-hidden bg-noir">
+                      <VignetteCarrousel video={v} titre={v.titre || `Miniature ${i + 1}`} />
 
                       {/* Badge indice */}
-                      <span className="absolute top-1 left-1 rounded bg-noir/80 px-1.5 py-0.2 font-mono text-[9px] font-bold text-blanc">
+                      <span className="relative z-10 top-1 left-1 ml-1 mt-1 inline-block rounded bg-noir/80 px-1.5 py-0.5 font-mono text-[9px] font-bold text-blanc backdrop-blur-sm">
                         #{i + 1}
                       </span>
 
                       {/* Indicateur de lecture actif */}
                       {estActif && (
-                        <span className="absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-noir text-[8px] font-black">
+                        <span className="absolute bottom-1 right-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-noir text-[8px] font-black shadow">
                           ▶
                         </span>
                       )}
@@ -252,5 +226,100 @@ export function CarrouselVideos({
         )}
       </div>
     </figure>
+  );
+}
+
+/**
+ * Vignette pour le carrousel vidéo avec cascade de résolutions YouTube HD
+ * et halo d'ambiance flou pour supprimer toute bande noire résiduelle.
+ */
+function VignetteCarrousel({
+  video,
+  titre,
+}: {
+  video: Video;
+  titre: string;
+}) {
+  const parsed = parserSourceVideo(video.youtubeId || "");
+  const idYT = parsed.type === "youtube" ? parsed.valeur : null;
+
+  const urlsCandidates = useMemo(() => {
+    if (video.miniature && !video.miniature.includes("ytimg.com")) {
+      return [video.miniature];
+    }
+    if (idYT) {
+      return [
+        `https://i.ytimg.com/vi/${idYT}/maxresdefault.jpg`,
+        `https://i.ytimg.com/vi/${idYT}/mqdefault.jpg`,
+        `https://i.ytimg.com/vi/${idYT}/oar2.jpg`,
+        video.miniature || `https://i.ytimg.com/vi/${idYT}/hqdefault.jpg`,
+      ].filter(Boolean);
+    }
+    if (parsed.type === "vimeo") {
+      return [video.miniature || `https://vumbnail.com/${parsed.valeur}.jpg`];
+    }
+    return video.miniature ? [video.miniature] : [];
+  }, [idYT, video.miniature, parsed]);
+
+  const [indexUrl, setIndexUrl] = useState(0);
+  const srcActuelle = urlsCandidates[indexUrl];
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  const passerSuivante = useCallback(() => {
+    setIndexUrl((prev) => (prev < urlsCandidates.length - 1 ? prev + 1 : prev));
+  }, [urlsCandidates.length]);
+
+  // Détection immédiate post-hydratation pour les vignettes SSR 120x90 ou en échec
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete) {
+      if (
+        imgRef.current.naturalWidth <= 120 &&
+        imgRef.current.naturalHeight <= 90
+      ) {
+        passerSuivante();
+      }
+    }
+  }, [srcActuelle, passerSuivante]);
+
+  if (!srcActuelle) {
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-surface-2 text-gris text-xs font-mono">
+        🎬 Vidéo
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Halo d'ambiance flou arrière-plan pour combler tout bord ou lettre-boxe */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        key={`halo-${srcActuelle}`}
+        src={srcActuelle}
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover blur-xl opacity-60 brightness-75 transition-opacity duration-500"
+      />
+
+      {/* Image nette principale */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={imgRef}
+        key={`main-${srcActuelle}`}
+        src={srcActuelle}
+        alt={titre}
+        loading="lazy"
+        onError={passerSuivante}
+        onLoad={(e) => {
+          if (
+            e.currentTarget.naturalWidth <= 120 &&
+            e.currentTarget.naturalHeight <= 90
+          ) {
+            passerSuivante();
+          }
+        }}
+        className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+      />
+    </>
   );
 }
