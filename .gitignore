@@ -14,3 +14,5 @@ next-env.d.ts
 *.tsbuildinfo
 *.zip
 Claude outputs/
+content/publies/*
+!content/publies/.gitkeep
